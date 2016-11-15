@@ -1,0 +1,46 @@
+transfer_layer:
+  - name     : mm1
+    type     : Visa
+    init     :
+#        resource_name : ASRLCOM15::INSTR # Windows
+        resource_name : ASRL/dev/ttyUSB0 # Linux
+        read_termination : "\r"
+        baud_rate : 19200
+        backend       : "@py"
+        query_delay      : 0.01
+        timeout          : 3000
+
+#  - name     : mm1
+#    type     : Serial
+#    init     :
+#        port             : /dev/ttyUSB0 # Linux
+#        read_termination : "\r"
+#        baudrate         : 19200
+        
+
+#  - name  : visa_sm3
+#    type  : Serial
+#    init  :
+#        port    : COM7
+#        read_termination : "\r"
+#        baudrate        : 19200
+#        backend          : "@py"
+#        query_delay      : 0.01
+#        timeout          : 3000
+
+
+hw_drivers:
+  - name      : Sourcemeter1
+    type      : scpi
+    interface : mm1
+    init      :
+        device  : Keithley 2410
+
+         
+         
+#  - name      : Sourcemeter3
+#    type      : scpi
+#    interface : visa_sm1
+#    init      :
+#         device    : Keithley 2000
+
