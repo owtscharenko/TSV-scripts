@@ -17,6 +17,12 @@ from basil.dut import Dut
 
 class IV(object):
     
+    
+    def __init__(self, conf):
+            
+        self.dut = Dut(conf)
+        self.dut.init()
+        self.misc = Misc(dut=self.dut)  
 
     '''
     Class to perform a standard IV scan of the FE65 ShuLDO. For the standalone scan (current supply mode), one regulator is operated in current supply mode (Jumper P7 // P8 // P9: bottom), the remaining regulators
@@ -41,15 +47,16 @@ class IV(object):
         The output voltage is measured via 4-wire sensing (Jumper P13 // P17 // P21).
         For a parallel scan, a second regulator is set to current supply mode. The maximum allowed input current has to be adjusted accordingly (x2).
         '''
-        time.sleep(misc.minimum_delay)
+        
+        time.sleep(self.misc.minimum_delay)
         logging.info("Starting ...")
         
-        misc.reset(*device)                                         #resetting the Sourcemeters
-        misc.set_source_mode('CURR', 0.1, 1.5, 1.5, *device)          #set current source mode for every sourcemeter
+        self.misc.reset(*device)                                         #resetting the Sourcemeters
+        self.misc.set_source_mode('CURR', 0.1, 1.5, 1.5, *device)          #set current source mode for every sourcemeter
         
         
         if sense == 1:
-            dut['Sourcemeter1'].four_wire_on()
+            self.dut['Sourcemeter1'].four_wire_on()
 #         elif sense ==  0:
 #             dut['Sourcemeter1'].four_wire_off()
        # dut['Sourcemeter2'].four_wire_on()
@@ -71,27 +78,27 @@ class IV(object):
         
             input = 0
             #print input                                                                                                                                         #Set input current to 0
-            #input_current = misc.measure_current('Sourcemeter1')                                                                                                #Check input current
+            #input_current = self.misc.measure_current('Sourcemeter1')                                                                                                #Check input current
             for x in range(0, int(steps)):
                 time.sleep(0.01)                                                                                                                      #loop over steps                                                                
-                dut['Sourcemeter1'].set_current(polarity*input)                                                                                                  #Set input current
+                self.dut['Sourcemeter1'].set_current(polarity*input)                                                                                                  #Set input current
                 time.sleep(0.01)
-                input_current = misc.measure_current('Sourcemeter1')[0]                                                                                          #Value of interest is in the [0] position of the readout list
+                input_current = self.misc.measure_current('Sourcemeter1')[0]                                                                                          #Value of interest is in the [0] position of the readout list
                 time.sleep(0.01)
-                input_voltage = misc.measure_voltage('Sourcemeter1')[0]
+                input_voltage = self.misc.measure_voltage('Sourcemeter1')[0]
                 resistance = input_voltage/input_current
                 time.sleep(0.01)
-                #output_voltage_2 = misc.measure_voltage('Sourcemeter3')[0]
+                #output_voltage_2 = self.misc.measure_voltage('Sourcemeter3')[0]
                 logging.info("Set input current to %r" % input)
                 logging.info("Input current is %r A" % input_current)                                                                                           #Logging the readout
                 logging.info("Input voltage is %r V" % input_voltage)
                 print 'resistance %r' % resistance
                 #logging.info("Regulator 1 output voltage is %r V" % output_voltage_1)
                 #logging.info("Regulator 2 output voltage is %r V" % output_voltage_2)
-                #misc.data.append([input_voltage, input_current, output_voltage_1, output_voltage_2])                                                          #Writing readout in output file
+                #self.misc.data.append([input_voltage, input_current, output_voltage_1, output_voltage_2])                                                          #Writing readout in output file
                 if input_voltage>0:
-                    misc.data.append([input_voltage, input_current, resistance])                                                          #Writing readout in output file
-                    f.writerow(misc.data[-1])
+                    self.misc.data.append([input_voltage, input_current, resistance])                                                          #Writing readout in output file
+                    f.writerow(self.misc.data[-1])
                 pbar.update(input)
                 input += stepsize                                                                                                                               #Increase input current for next iteration
                 if input > max_Iin or float(input_voltage) >= 0.1:                                                                                                #Maximum values reached?
@@ -101,7 +108,7 @@ class IV(object):
             
             pbar.finish()
             logging.info('Measurement finished, plotting ...')
-            misc.reset(*device)            
+            self.misc.reset(*device)            
             
  
     def scan_tsv_res_source_VOLT(self, file_name, max_Vin, polarity, steps , stepsize, sense, *device):
@@ -112,18 +119,19 @@ class IV(object):
         The output voltage is measured via 4-wire sensing (Jumper P13 // P17 // P21).
         For a parallel scan, a second regulator is set to current supply mode. The maximum allowed input current has to be adjusted accordingly (x2).
         '''
-        time.sleep(misc.minimum_delay)
+        
+        time.sleep(self.misc.minimum_delay)
         logging.info("Starting ...")
         
-        misc.reset(*device)                                         #resetting the Sourcemeters
-        misc.set_source_mode('VOLT', 0.1, 1.5, 1.5, *device)          #set voltage source mode for every sourcemeter
+        self.misc.reset(*device)                                         #resetting the Sourcemeters
+        self.misc.set_source_mode('VOLT', 0.1, 1.5, 1.5, *device)          #set voltage source mode for every sourcemeter
         
         if sense == 1:
-            dut['Sourcemeter1'].four_wire_on()
+            self.dut['Sourcemeter1'].four_wire_on()
 #         elif sense ==  0:
-#             dut['Sourcemeter1'].four_wire_off()        
-       # dut['Sourcemeter2'].four_wire_on()
-        #dut['Sourcemeter3'].four_wire_on()
+#             self.dut['Sourcemeter1'].four_wire_off()        
+       # self.dut['Sourcemeter2'].four_wire_on()
+        #self.dut['Sourcemeter3'].four_wire_on()
 
         fncounter=1                                                 #creates output .csv
         while os.path.isfile( file_name ):
@@ -141,27 +149,27 @@ class IV(object):
         
             input = 0
             #print input                                                                                                                                         #Set input current to 0
-            #input_current = misc.measure_current('Sourcemeter1')                                                                                                #Check input current
+            #input_current = self.misc.measure_current('Sourcemeter1')                                                                                                #Check input current
             for x in range(0, int(steps)):
                 time.sleep(0.01)                                                                                                                      #loop over steps                                                                
-                dut['Sourcemeter1'].set_voltage(polarity*input)                                                                                                  #Set input current
+                self.dut['Sourcemeter1'].set_voltage(polarity*input)                                                                                                  #Set input current
                 time.sleep(0.01)
-                input_current = misc.measure_current('Sourcemeter1')[0]                                                                                          #Value of interest is in the [0] position of the readout list
+                input_current = self.misc.measure_current('Sourcemeter1')[0]                                                                                          #Value of interest is in the [0] position of the readout list
                 time.sleep(0.01)
-                input_voltage = misc.measure_voltage('Sourcemeter1')[0]
+                input_voltage = self.misc.measure_voltage('Sourcemeter1')[0]
                 resistance = input_voltage/input_current
                 time.sleep(0.01)
-                #output_voltage_2 = misc.measure_voltage('Sourcemeter3')[0]
+                #output_voltage_2 = self.misc.measure_voltage('Sourcemeter3')[0]
                 logging.info("Set input voltage to %r" % input)
                 logging.info("Input current is %r A" % input_current)                                                                                           #Logging the readout
                 logging.info("Input voltage is %r V" % input_voltage)
                 print 'resistance %r' % resistance
                 #logging.info("Regulator 1 output voltage is %r V" % output_voltage_1)
                 #logging.info("Regulator 2 output voltage is %r V" % output_voltage_2)
-                #misc.data.append([input_voltage, input_current, output_voltage_1, output_voltage_2])                                                          #Writing readout in output file
+                #self.misc.data.append([input_voltage, input_current, output_voltage_1, output_voltage_2])                                                          #Writing readout in output file
                 if input_current>0:
-                    misc.data.append([input_voltage, input_current, resistance])                                                          #Writing readout in output file
-                    f.writerow(misc.data[-1])
+                    self.misc.data.append([input_voltage, input_current, resistance])                                                          #Writing readout in output file
+                    f.writerow(self.misc.data[-1])
                 else :
                     print'outside range! %f' % input_current
                 pbar.update(input)
@@ -173,34 +181,23 @@ class IV(object):
             
             pbar.finish()
             logging.info('Measurement finished, plotting ...')
-            misc.reset(*device)   
+            self.misc.reset(*device)   
         
   
 if __name__ == '__main__':
     
-    dut = Dut('devices.yaml')
-    dut.init()
-    misc = Misc(dut=dut)  
-                                                                                                                                        #Calling scan_misc with dut = Dut('devices.yaml')
+    self.dut = Dut('devices.yaml')
+    self.dut.init()
+    self.misc = self.misc(dut=self.dut)  
+                                                                                                                                        #Calling scan_self.misc with self.dut = Dut('devices.yaml')
     via = 21
-    
-    
-#     dut['Sourcemeter1'].on()
-#     dut['Sourcemeter1'].set_autorange()
-#     dut['Sourcemeter1'].source_volt()
-#     print dut['Sourcemeter1'].get_name()                                                                                                                    #Get meter ID to check communication
-#     print dut['Sourcemeter1'].get_source_mode()
-#     print dut['Sourcemeter1'].get_remote_sense()
-#     print dut['Sourcemeter1'].get_autorange()
-#     print dut['Sourcemeter2'].get_name()
-#     print dut['Sourcemeter3'].get_name()
     
     
 
     os.chdir('/media/niko/data/Niko/TSV-D_3/resmeas')
     
     iv = IV()
-    iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-4wire.csv', 0.02, 1, 5000 , 0.0001, 1, 'Sourcemeter1')
+#     iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-4wire.csv', 0.02, 1, 5000 , 0.0001, 1, 'Sourcemeter1')
 #     iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-2wire.csv', 0.02, 1, 5000 , 0.0001, 0, 'Sourcemeter1')                                       #Conduct IV scan
 #     iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-4wire.csv', 0.05, 1, 5000 , 0.0001, 1,'Sourcemeter1')                                                                 
-#     iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-2wire.csv', 0.05, 1, 5000 , 0.0001, 0,'Sourcemeter1')
+    iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-2wire.csv', 0.05, 1, 5000 , 0.0001, 0,'Sourcemeter1')
