@@ -51,7 +51,7 @@ class TSV_res_meas_analysis(object):
         A,mu,sigma = p 
         return A*np.exp(-(x-mu)**2/(2*sigma**2))
     
-    def plot_single_via(self,x,y,z,voltage=False):
+    def plot_single_via(self,x,y,z,voltage=True):
 
         ymax = 1.1*np.amax(z)
         
@@ -61,22 +61,22 @@ class TSV_res_meas_analysis(object):
         
 #         for i in range (0,len(z)):
 #             print x[i]
-        if voltage is False:
+        if voltage is True:
             plt.xlabel('Voltage [mV]')
             xmax = 1.1*np.amax(x)
             plt.xlim(-0.1*xmax,xmax)
-            plt.plot(x,z,label='Data',marker='.',color='blue')
+            plt.plot(x,z, 'b.', markersize = 3,label='Data')
               
         else :
             plt.xlabel('Current [mA]')
-            xmax = 1.1*np.amax(x)
+            xmax = 1.1*np.amax(y)
             plt.xlim(-0.1*xmax,xmax)
             plt.plot(y,z,label='Data',marker = '.', color='blue')
         plt.ylabel('Resistance [Ohm]')
         
         plt.grid()
         plt.savefig(self.outfile + '.'+ self.outformat)
-        plt.show()
+#         plt.show()
         
     
     
@@ -91,15 +91,17 @@ class TSV_res_meas_analysis(object):
         return np.round(x/b,5)
     
     
-    def histo_1_via(self,data, bins):
+    def histo_1_via(self, data, bins, c):
+        
+        plt.cla()
         plt.title(self.title)
         plt.grid()
-        plt.hist(data,bins,range=[0, 1.5*np.amax(z)])
+        plt.hist(data, bins, range=[0, 1.5*np.amax(data)], color=c)
         plt.xlabel('Resistance [Ohm]')
         plt.ylabel('count [#]')
-        plt.text( 0.4, 70,'bins = %r' % bins )
+#         plt.text( 0.4, 25,'color = %r' % c )
         plt.savefig(self.outfile + '_histo' + '.' + self.outformat)
-        plt.show()
+#         plt.show()
         
     
     
@@ -111,11 +113,12 @@ if __name__ == "__main__":
     '''
     Plot single via
     '''
-    dirpath = '/media/niko/data/Niko/TSV-D_3/resmeas'
-    f= 'via1-20mamp-4wire.csv'
+    dirpath = '/media/niko/data/Niko/test_sm'
+    f= 'via99-50mvolt-2wire_8.csv'
         
     x,y,z = func.load_file(os.path.join(dirpath, f))
-        
+   
 #     func.plot_single_via(x, y, z)     
 #     print func.mean_res_1_via(z)
-    func.histo_1_via(z,'fd')
+    func.histo_1_via(z,50,'blue')
+    logging.info('finished')

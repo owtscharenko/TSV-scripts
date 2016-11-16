@@ -15,7 +15,7 @@ from pybar.scans.tune_noise_occupancy import NoiseOccupancyScan
 
 if __name__ == "__main__":   
     
-    os.chdir('/media/niko/data/Niko/TSV-S_3')
+    os.chdir('/media/niko/data/Niko/TSV-S3')
     
     target_threshold = 55  # in PlsrDAC (assuming 1 PlsrDAC = 55 electrons)
     target_charge = 400 # in PlsrDAC (assuming 1 PlsrDAC = 55 electrons)

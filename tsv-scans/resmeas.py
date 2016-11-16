@@ -11,7 +11,7 @@ import multiprocessing
 import progressbar
 import os.path
 
-from scan_misc import Misc
+from scan_misc import Misc 
 from basil.dut import Dut
 
 
@@ -55,7 +55,7 @@ class IV(object):
         self.misc.set_source_mode('CURR', 0.1, 1.5, 1.5, *device)          #set current source mode for every sourcemeter
         
         
-        if sense == 1:
+        if sense == True:
             self.dut['Sourcemeter1'].four_wire_on()
 #         elif sense ==  0:
 #             dut['Sourcemeter1'].four_wire_off()
@@ -109,9 +109,9 @@ class IV(object):
             pbar.finish()
             logging.info('Measurement finished, plotting ...')
             self.misc.reset(*device)            
-            
+        return file_name.split('.')[0]
  
-    def scan_tsv_res_source_VOLT(self, file_name, max_Vin, polarity, steps , stepsize, sense, *device):
+    def scan_tsv_res_source_VOLT(self, file_name, max_Vin, current_limit, polarity, steps , stepsize, sense, *device):
         '''
         IV-scan in current supply mode. One regulator is operated in current supply mode (Jumper P7 // P8 // P9: bottom), the remaining regulators
         in voltage supply mode (Jumper P7 // P8 // P9: top). 'Sourcemeter1' supplys the input current. The input voltage is measured using 4-wire sensing between P01 (GND) and P03 (HI), the additional
@@ -124,9 +124,9 @@ class IV(object):
         logging.info("Starting ...")
         
         self.misc.reset(*device)                                         #resetting the Sourcemeters
-        self.misc.set_source_mode('VOLT', 0.1, 1.5, 1.5, *device)          #set voltage source mode for every sourcemeter
+        self.misc.set_source_mode('VOLT', current_limit, 1.5, 1.5, *device)          #set voltage source mode for every sourcemeter
         
-        if sense == 1:
+        if sense == True:
             self.dut['Sourcemeter1'].four_wire_on()
 #         elif sense ==  0:
 #             self.dut['Sourcemeter1'].four_wire_off()        
@@ -174,7 +174,7 @@ class IV(object):
                     print'outside range! %f' % input_current
                 pbar.update(input)
                 input += stepsize                                                                                                                               #Increase input current for next iteration
-                if input > max_Vin or float(input_current) >= 0.1:                                                                                                #Maximum values reached?
+                if input > max_Vin or float(input_current) >= current_limit:                                                                                                #Maximum values reached?
                     break             
     
             
@@ -182,22 +182,22 @@ class IV(object):
             pbar.finish()
             logging.info('Measurement finished, plotting ...')
             self.misc.reset(*device)   
-        
+        return file_name#.split('.')[0]
   
 if __name__ == '__main__':
     
-    self.dut = Dut('devices.yaml')
-    self.dut.init()
-    self.misc = self.misc(dut=self.dut)  
+#     dut = Dut('/home/niko/git/TSV-scripts/tsv-scans/devices.yaml')
+#     dut.init()
+#     misc = misc(dut=dut)  
                                                                                                                                         #Calling scan_self.misc with self.dut = Dut('devices.yaml')
-    via = 21
-    
+    via = 1001
+    sensing = True
     
 
-    os.chdir('/media/niko/data/Niko/TSV-D_3/resmeas')
+    os.chdir('/media/niko/data/Niko/test_sm')
     
-    iv = IV()
-#     iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-4wire.csv', 0.02, 1, 5000 , 0.0001, 1, 'Sourcemeter1')
-#     iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-2wire.csv', 0.02, 1, 5000 , 0.0001, 0, 'Sourcemeter1')                                       #Conduct IV scan
-#     iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-4wire.csv', 0.05, 1, 5000 , 0.0001, 1,'Sourcemeter1')                                                                 
-    iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-2wire.csv', 0.05, 1, 5000 , 0.0001, 0,'Sourcemeter1')
+    iv = IV('/home/niko/git/TSV-scripts/tsv-scans/devices.yaml')
+    iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-4wire.csv', 0.02, 1, 5000 , 0.0001, sensing, 'Sourcemeter1')
+#     iv.scan_tsv_res_source_CURR('via' + str(via) + '-20mamp-2wire.csv', 0.02, 1, 5000 , 0.0001, sensing, 'Sourcemeter1')                                       #Conduct IV scan
+#     iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-4wire.csv', 0.05, 1, 5000 , 0.0001, sensing,'Sourcemeter1')                                                                 
+#     iv.scan_tsv_res_source_VOLT('via' + str(via) + '-50mvolt-2wire.csv', 0.05, 1, 5000 , 0.0001, sensing,'Sourcemeter1')
