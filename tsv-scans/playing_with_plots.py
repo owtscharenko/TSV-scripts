@@ -3,6 +3,7 @@ import numpy as np
 import csv
 from decimal import Decimal as dec
 from scipy.optimize import curve_fit
+from matplotlib.offsetbox import AnchoredText
 
 import os
 import logging
@@ -64,24 +65,28 @@ class TSV_res_meas_analysis(object):
             plt.xlabel('Voltage [V]')
             xmax = 1.1*np.amax(x)
             plt.xlim(-0.1*xmax,xmax)
-            plt.plot(x,z, 'b.', markersize = 3,label='Data \n mean = %.4f' %m)              
+            plt.plot(x,z, 'b.', markersize = 3,label=' Data \n mean = %.4f' %m)             
         else :
             plt.xlabel('Current [A]')
             xmax = 1.1*np.amax(y)
             plt.xlim(-0.1*xmax,xmax)
-            plt.plot(y,z,label='Data \n mean = %.4f' %m, marker = '.', color='blue')
+            plt.plot(y,z,label='Data  mean = %.4f' %m, marker = '.', color='blue')
         plt.ylabel('Resistance [Ohm]')
         if fit:
-            p, _ =  curve_fit(self.fitfunction_exp, x[50:], z[50:], p0) 
-            plt.plot(self.fitfunction_exp(x[50:],*p), 'r',label='Fit')
+            p, _ =  curve_fit(self.fitfunction_line, x[first:], z[first:], p0) 
+            plt.plot(self.fitfunction_line(x[first:],*p), 'r',label='Fit')
 #             print curve_fit(self.fitfunction_single_via, x, z, p0=(1,-1,10))
             print p # fit succesful, %r,%r,%r,%r,%r' % p
             #except: 
              #   logging.error('Fit failed!') 
+#         plt.text(0.1,0,'mean = %r' %np.round(np.mean(z[40:]),3))
         plt.legend(loc='lower right')
         plt.grid()
-        plt.savefig(self.outfile + '.'+ self.outformat)
-#         plt.show()
+#         box = AnchoredText('mean = %f' %np.round(np.mean(z[first:]),3), loc='right center')
+#         ax = plt.axes()
+#         ax.add_artist(box)        
+#         plt.savefig(self.outfile + '.'+ self.outformat)
+        plt.show()
     
     
     def zoom_single_via(self,x,y,z):  
@@ -96,12 +101,14 @@ class TSV_res_meas_analysis(object):
         plt.xlim(0,xmax)
         plt.plot(x,z, 'b.', markersize = 3,label='Data')
         plt.ylabel('Resistance [Ohm]')
-        plt.text(x, y, str(np.mean(z[40:])))
         plt.grid()
         plt.savefig(self.outfile + '-zoom' + '.'+ self.outformat)
 #         plt.show()    
     
-    
+    def fitfunction_line (self, x, *p):
+        m,b = p
+        return m*x + b
+        
     def fitfunction_exp(self, x, *p):
         a, b, c = p
         return a*np.exp(b/x)+c # a*np.log(x)+ c*x**d +e #a*np.log(x*b) + x/c + d # a*np.exp(b/x)+c   #
@@ -148,8 +155,9 @@ if __name__ == "__main__":
     f= 'via7-300mamp-4wire.csv'
     
 #     p = (1, 10, 10,10,10000,1000000)    # polynom
-    p=(0.05,-2,0.5)  # exp    
-    fit=False
+#     p=(0.05,-2,0.5)  # exp    
+    p = (0.1,0.5)
+    fit=True
     x,y,z = func.load_file(os.path.join(dirpath, f))
    
     func.plot_single_via(x, y, z, p, fit)
