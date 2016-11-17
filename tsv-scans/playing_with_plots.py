@@ -89,6 +89,14 @@ class TSV_res_meas_analysis(object):
         plt.show()
     
     
+    def wirebond_corr(self, data, length_t, length_b, spec_res):
+        r_via_top = length_t*spec_res
+        r_via_bottom = length_b*spec_res
+        total_r = r_via_bottom + r_via_top
+        data_corr = np.subtract(data,total_r)    
+        return data_corr, total_r    
+    
+    
     def zoom_single_via(self,x,y,z):  
           
         ymax = 1.03*np.amax(z)
@@ -145,7 +153,8 @@ class TSV_res_meas_analysis(object):
     
     
 if __name__ == "__main__":
-        
+
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - [%(levelname)-8s] (%(threadName)-10s) %(message)s")        
     func = TSV_res_meas_analysis()
         
     '''
@@ -159,9 +168,10 @@ if __name__ == "__main__":
     p = (0.1,0.5)
     fit=True
     x,y,z = func.load_file(os.path.join(dirpath, f))
-   
+    
+    
     func.plot_single_via(x, y, z, p, fit)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
-#     logging.info('finished')
+    logging.info('finished')

@@ -30,8 +30,7 @@ class TSV_res_meas_analysis(object):
         self.title = os.path.split(path)[1].split('.')[0]
         
         self.f = os.path.split(path)[1]    
-            
-        
+                    
         x,y,z = [], [], []
         with open(path, 'rb') as datafile:
             linereader = csv.reader(datafile, delimiter=',', quotechar='"')
@@ -47,6 +46,19 @@ class TSV_res_meas_analysis(object):
                 z.append(float(row[2]))
                 
         return np.round(np.array(x),5), np.round(np.array(y),5), np.round(np.array(z),5)
+
+
+
+    def wirebond_corr(self, data, length_t, length_b, spec_res):
+        r_via_top = length_t*spec_res
+        r_via_bottom = length_b*spec_res
+        total_r = r_via_bottom + r_via_top
+        data_corr = np.subtract(data,total_r)    
+        return data_corr
+
+
+
+
 
     def fitfunction_gauss(self,x,*p):
         A,mu,sigma = p 
@@ -96,7 +108,7 @@ class TSV_res_meas_analysis(object):
         plt.xlim(0,xmax)
         plt.plot(x,z, 'b.', markersize = 3,label='Data')
         plt.ylabel('Resistance [Ohm]')
-        plt.text(x, y, str(np.mean(z[40:])))
+#         plt.text(x, y, str(np.mean(z[40:])))
         plt.grid()
         plt.savefig(self.outfile + '-zoom' + '.'+ self.outformat)
 #         plt.show()    
@@ -138,9 +150,10 @@ class TSV_res_meas_analysis(object):
     
     
 if __name__ == "__main__":
-        
-    func = TSV_res_meas_analysis()
-        
+    
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - [%(levelname)-8s] (%(threadName)-10s) %(message)s")
+    
+    func = TSV_res_meas_analysis()        
     '''
     Plot single via
     '''
@@ -156,4 +169,4 @@ if __name__ == "__main__":
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
-#     logging.info('finished')
+    logging.info('finished')
