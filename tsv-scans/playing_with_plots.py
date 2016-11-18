@@ -170,7 +170,7 @@ class TSV_res_meas_analysis(object):
         plt.cla()
         plt.title(self.title)
         plt.grid()
-        plt.hist(means)
+        plt.histo(number, means)
         logging.debug('wtf')
         plt.show() 
         return np.mean(means), means   #numbers.append(re.split('(\d+)',files[i])[1])
