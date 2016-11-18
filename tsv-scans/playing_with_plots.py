@@ -8,6 +8,9 @@ from matplotlib.offsetbox import AnchoredText
 import os
 import logging
 import path
+import re
+from numpy.core.defchararray import endswith
+
 
 
 class TSV_res_meas_analysis(object):
@@ -76,7 +79,7 @@ class TSV_res_meas_analysis(object):
             p, _ =  curve_fit(self.fitfunction_line, x[first:], z[first:], p0) 
             plt.plot(self.fitfunction_line(x[first:],*p), 'r',label='Fit')
 #             print curve_fit(self.fitfunction_single_via, x, z, p0=(1,-1,10))
-            print p # fit succesful, %r,%r,%r,%r,%r' % p
+            print 'fit succesful: b = %r' % p[1]
             #except: 
              #   logging.error('Fit failed!') 
 #         plt.text(0.1,0,'mean = %r' %np.round(np.mean(z[40:]),3))
@@ -149,9 +152,41 @@ class TSV_res_meas_analysis(object):
         plt.savefig(self.outfile + '_histo' + '.' + self.outformat)
 #         plt.show()
         
-    
-    
-    
+    def mean_per_FE(self,path):
+        
+        means, files, number = [],[],[]
+        via = 1
+        for file in os.listdir(path):
+            if file.endswith('.csv'):
+#                 files.append(split.file('via','-')[1])
+                files.append(os.path.split(file)[1])#.split('via','-')[1]  
+        
+        print '%r vias found, processing ...' %len(files)
+        os.chdir(path)                  
+        for i in range(1, len(files)):
+            number.append(re.split('(\d+)',files[i])[1])
+            means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2]))
+        
+        plt.cla()
+        plt.title(self.title)
+        plt.grid()
+        plt.hist(means)
+        logging.debug('wtf')
+        plt.show() 
+        return np.mean(means), means   #numbers.append(re.split('(\d+)',files[i])[1])
+                
+        
+        
+            
+#         print number
+#         if len(files)>10:
+#             print files
+#             for via in range(0,26):
+#                 means.append(np.mean(self.load_file(files[via])[2]))
+#                 via = split.files('via','-')[-1]
+#                    
+#         return means
+        
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - [%(levelname)-8s] (%(threadName)-10s) %(message)s")        
@@ -170,8 +205,11 @@ if __name__ == "__main__":
     x,y,z = func.load_file(os.path.join(dirpath, f))
     
     
-    func.plot_single_via(x, y, z, p, fit)
+#     func.plot_single_via(x, y, z, p, fit)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
+    print func.mean_per_FE(dirpath)[1]
+    
+    
     logging.info('finished')
