@@ -162,17 +162,22 @@ class TSV_res_meas_analysis(object):
                 files.append(os.path.split(file)[1])#.split('via','-')[1]  
         
         print '%r vias found, processing ...' %len(files)
-        os.chdir(path)                  
+        os.chdir(path) 
+                         
         for i in range(1, len(files)):
             number.append(re.split('(\d+)',files[i])[1])
-            means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2]))
+            means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2][50:]))
         
         plt.cla()
-        plt.title(self.title)
+        plt.title('vias on TSV-D4')
         plt.grid()
-        plt.histo(number, means)
+        #plt.xlim(0,10**np.log(1e3))
+        plt.hist(means, bins = 10**np.linspace(np.log10(0.1), np.log(1e3),15)) #logarithmic binning 
         logging.debug('wtf')
-        plt.show() 
+        plt.gca().set_xscale('log')
+        plt.xlabel('mean resistance in log([Ohm])')
+        plt.ylabel('count [#]')
+        plt.savefig('meantest.pdf') 
         return np.mean(means), means   #numbers.append(re.split('(\d+)',files[i])[1])
                 
         
@@ -195,7 +200,7 @@ if __name__ == "__main__":
     '''
     Plot single via
     '''
-    dirpath = '/media/niko/data/Niko/TSV-D4/resmeas'
+    dirpath = '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D4/resmeas'
     f= 'via7-300mamp-4wire.csv'
     
 #     p = (1, 10, 10,10,10000,1000000)    # polynom
@@ -209,7 +214,7 @@ if __name__ == "__main__":
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
-    print func.mean_per_FE(dirpath)[1]
+    func.mean_per_FE(dirpath)[1]
     
     
     logging.info('finished')
