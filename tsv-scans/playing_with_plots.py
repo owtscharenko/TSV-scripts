@@ -164,7 +164,7 @@ class TSV_res_meas_analysis(object):
         print '%r vias found, processing ...' %len(files)
         os.chdir(path) 
                          
-        for i in range(1, len(files)):
+        for i in range(0, len(files)):
             number.append(re.split('(\d+)',files[i])[1])
             means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2][50:]))
         
@@ -178,6 +178,22 @@ class TSV_res_meas_analysis(object):
         plt.xlabel('mean resistance in log([Ohm])')
         plt.ylabel('count [#]')
         plt.savefig('meantest.pdf') 
+        
+        '''Plotting "map" '''
+        
+        plt.cla()
+        plt.title('Distribution of vias on TSV-D4')
+        plt.grid()
+        plt.gca().set_yscale('log')
+        labels = sorted(number,key = int)
+        plt.xticks( number, labels)
+
+        plt.plot(number, means,'b.')
+        print labels
+        plt.savefig('maptest.pdf')
+        
+        
+        
         return np.mean(means), means   #numbers.append(re.split('(\d+)',files[i])[1])
                 
         
