@@ -162,35 +162,40 @@ class TSV_res_meas_analysis(object):
                 files.append(os.path.split(file)[1])#.split('via','-')[1]  
         
         print '%r vias found, processing ...' %len(files)
-        os.chdir(path) 
+        os.chdir(path)
+        chip_number = os.path.split(os.path.split(path)[0])[1]
                          
         for i in range(0, len(files)):
             number.append(re.split('(\d+)',files[i])[1])
             means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2][50:]))
-        
+        print number
         plt.cla()
-        plt.title('vias on TSV-D4')
+        plt.title('vias on ' + chip_number)
         plt.grid()
         #plt.xlim(0,10**np.log(1e3))
-        plt.hist(means, bins = 10**np.linspace(np.log10(0.1), np.log(1e3),15)) #logarithmic binning 
+        plt.hist(means, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18)) #logarithmic binning 
         logging.debug('wtf')
         plt.gca().set_xscale('log')
-        plt.xlabel('mean resistance in log([Ohm])')
-        plt.ylabel('count [#]')
-        plt.savefig('meantest.pdf') 
+        plt.xlabel('Mean resistance in Ohm')
+        plt.ylabel('Count')
+        plt.savefig(chip_number + '-resistance-histogram.pdf') 
         
         '''Plotting "map" '''
         
         plt.cla()
-        plt.title('Distribution of vias on TSV-D4')
+        plt.title('Local distribution of vias on ' + chip_number)
+        plt.xlabel('Number of via')
+        plt.ylabel('Resistance in Ohm')
         plt.grid()
+        plt.xlim(0,27)
         plt.gca().set_yscale('log')
-        labels = sorted(number,key = int)
-        plt.xticks( number, labels)
+        labels = map(int, sorted(number,key = int))
+        plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
 
-        plt.plot(number, means,'b.')
-        print labels
-        plt.savefig('maptest.pdf')
+        plt.plot(number, means, ' b.', markersize = 8, label = 'mean per via')
+    
+        plt.legend(loc = 'best', numpoints=1)
+        plt.savefig(chip_number + '-distribution-map.pdf')
         
         
         
@@ -216,14 +221,16 @@ if __name__ == "__main__":
     '''
     Plot single via
     '''
-    dirpath = '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D4/resmeas'
+    dirpath = '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D3/resmeas2'
+    dirpath_all = ['/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D3/resmeas2', '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D4/resmeas', '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D5/resmeas']
+    
     f= 'via7-300mamp-4wire.csv'
     
 #     p = (1, 10, 10,10,10000,1000000)    # polynom
 #     p=(0.05,-2,0.5)  # exp    
     p = (0.1,0.5)
     fit=True
-    x,y,z = func.load_file(os.path.join(dirpath, f))
+   # x,y,z = func.load_file(os.path.join(dirpath, f))
     
     
 #     func.plot_single_via(x, y, z, p, fit)
