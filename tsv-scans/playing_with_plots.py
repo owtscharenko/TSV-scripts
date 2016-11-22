@@ -152,7 +152,7 @@ class TSV_res_meas_analysis(object):
         plt.savefig(self.outfile + '_histo' + '.' + self.outformat)
 #         plt.show()
         
-    def mean_per_FE(self,path):
+    def mean_per_FE(self,path, plotmarker):
         
         means, files, number = [],[],[]
         via = 1
@@ -169,41 +169,64 @@ class TSV_res_meas_analysis(object):
             number.append(re.split('(\d+)',files[i])[1])
             means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2][50:]))
         print number
-        plt.cla()
-        plt.title('vias on ' + chip_number)
-        plt.grid()
-        #plt.xlim(0,10**np.log(1e3))
-        plt.hist(means, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18)) #logarithmic binning 
-        logging.debug('wtf')
-        plt.gca().set_xscale('log')
-        plt.xlabel('Mean resistance in Ohm')
-        plt.ylabel('Count')
-        plt.savefig(chip_number + '-resistance-histogram.pdf') 
         
-        '''Plotting "map" '''
+        if plotmarker:
+            plt.cla()
+            plt.title('vias on ' + chip_number)
+            plt.grid()
+            #plt.xlim(0,10**np.log(1e3))
+            plt.hist(means, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18)) #logarithmic binning 
+            logging.debug('wtf')
+            plt.gca().set_xscale('log')
+            plt.xlabel('Mean resistance in Ohm')
+            plt.ylabel('Count')
+            plt.savefig(chip_number + '-resistance-histogram.pdf') 
+            
+            '''Plotting "map" '''
+            
+            plt.cla()
+            plt.title('Local distribution of vias on ' + chip_number)
+            plt.xlabel('Number of via')
+            plt.ylabel('Resistance in Ohm')
+            plt.grid()
+            plt.xlim(0,27)
+            plt.gca().set_yscale('log')
+            labels = map(int, sorted(number,key = int))
+            plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
+    
+            plt.plot(number, means, ' b.', markersize = 8, label = 'mean per via')
         
+            plt.legend(loc = 'best', numpoints=1)
+            plt.savefig(chip_number + '-distribution-map.pdf')
+        
+        else:
+            print 'creating means only'
+        
+        return number, means, chip_number   #numbers.append(re.split('(\d+)',files[i])[1])
+                
+    def plot_3_FE(self, mean1,mean2,mean3):   
+    
+        chip_numbers = [mean1[2], mean2[2], mean3[2] ]
+        number = mean1[0]
         plt.cla()
-        plt.title('Local distribution of vias on ' + chip_number)
+        plt.title('Local distribution of via resistance on 3 FE ' )#+ mean1[2]  + ' , ' +  mean2[2] + ' and ' + mean3[2])
         plt.xlabel('Number of via')
         plt.ylabel('Resistance in Ohm')
         plt.grid()
         plt.xlim(0,27)
         plt.gca().set_yscale('log')
         labels = map(int, sorted(number,key = int))
-        plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
-
-        plt.plot(number, means, ' b.', markersize = 8, label = 'mean per via')
-    
-        plt.legend(loc = 'best', numpoints=1)
-        plt.savefig(chip_number + '-distribution-map.pdf')
+        plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))        
         
+        plt.plot(number, mean1[1], 'b.', label = mean1[2], markersize = 8)
+        plt.plot(number, mean2[1], 'r.', label = mean2[2], markersize = 8)
+        plt.plot(number, mean3[1],'g.' , label = mean3[2], markersize = 8)
         
-        
-        return np.mean(means), means   #numbers.append(re.split('(\d+)',files[i])[1])
-                
-        
-        
+        plt.subplot(111).legend(bbox_to_anchor=(1.1, 1.1), numpoints = 1)
+        #plt.legend(loc = 'best', numpoints=1)
+        plt.savefig('combined-distribution-map.pdf')    
             
+        
 #         print number
 #         if len(files)>10:
 #             print files
@@ -229,7 +252,7 @@ if __name__ == "__main__":
 #     p = (1, 10, 10,10,10000,1000000)    # polynom
 #     p=(0.05,-2,0.5)  # exp    
     p = (0.1,0.5)
-    fit=True
+    fit=False
    # x,y,z = func.load_file(os.path.join(dirpath, f))
     
     
@@ -237,7 +260,7 @@ if __name__ == "__main__":
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
-    func.mean_per_FE(dirpath)[1]
-    
+  #  func.mean_per_FE(dirpath, fit)[1]
+    func.plot_3_FE(func.mean_per_FE(dirpath_all[0],fit), func.mean_per_FE(dirpath_all[1],fit), func.mean_per_FE(dirpath_all[2],fit))
     
     logging.info('finished')
