@@ -66,21 +66,22 @@ class TSV_res_meas_analysis(object):
     
     def plot_single_via(self, x, y, z, p0, fit, voltage=True):
         
-        first = 40
+        first = 0
         ymax = 1.1*np.amax(z)       
         plt.cla()
         plt.ylim(0,ymax)     
         plt.title(self.title)
-        m = np.round(np.mean(z[first:]),4)
+        m = np.round(np.mean(z),4)
+#         m = np.round(np.mean(z[first:]),4)    # use this line instead the upper one, in case of sm 2410 (first 40 values are rubbish)
         if voltage is True:
             plt.xlabel('Voltage [V]')
             xmax = 1.1*np.amax(x)
-            plt.xlim(-0.1*xmax,xmax)
+            plt.xlim(0,xmax)
             plt.plot(x,z, 'b.', markersize = 3,label='Data \n mean = %.4f' %m)              
         else :
             plt.xlabel('Current [A]')
             xmax = 1.1*np.amax(y)
-            plt.xlim(-0.1*xmax,xmax)
+            plt.xlim(0,xmax)
             plt.plot(y,z,label='Data \n mean = %.4f' %m, marker = '.', color='blue')
         plt.ylabel('Resistance [Ohm]')
         if fit:
