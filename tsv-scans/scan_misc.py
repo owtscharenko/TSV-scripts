@@ -50,6 +50,8 @@ class Misc(object):
                     model[i] = str(2400)
                 elif 'MODEL 2000' in name_arr[i]:
                     model[i] = str(2000)
+                elif 'MODEL 2450' in name_arr[i]:
+                    model[i] = str(2450)
             else:
                 raise RuntimeError('Something went wrong')
             typ [i] = vendor[i] + '_' + model[i]
@@ -59,18 +61,23 @@ class Misc(object):
     #def get_current_reading(self, *device):
     def measure_current(self, *device):
         '''
-        Current reading of a Keithley 2410 sourcemeter. Since querying the voltage/current reading results in a tuple,
+        Current reading of a Keithley 2410 or 2450 sourcemeter. Since querying the voltage/current reading results in a tuple,
         the proper element has to be selected. In case of the Keithley 2410 sourcemeter, the current reading is the second
         element of the tuple, the voltage reading the first element. If using a different (source-)meter, edit as needed.
         '''
-        typ = 'keithley_2410'
+        typ = 'keithley_2450'
         current = [None]*len(device)
         if typ == 'keithley_2410':
             for i in range(0, len(device)):
                 #logging.info("Query results in %r" % dut[device[i]].get_current()) #Raw output of a current query. Used to determine which element of the output tuple represents the measured current.
                 current[i] = float(self.dut[device[i]].get_current().split(',')[1])
             return current
-        else:
+        elif typ == 'keithley_2450':
+            print 'current ok'
+            for i in range(0, len(device)):
+                current[i] = float(self.dut[device[i]].get_current())
+            return current
+        else : 
             pass
         
     #===========================================================================            #Not working as intended
@@ -96,13 +103,18 @@ class Misc(object):
         See get_current_reading().
         '''
         #typ = self.get_device_type(device)
-        typ = 'keithley_2410'
+        typ = 'keithley_2450'
         voltage = [None]*len(device)
         if typ == 'keithley_2410':
             for i in range(0, len(device)):
                 voltage[i] = float(self.dut[device[i]].get_voltage().split(',')[0])
             return voltage
-        else:
+        elif typ == 'keithley_2450':
+            print 'voltage ok'
+            for i in range(0, len(device)):
+                voltage[i] = float(self.dut[device[i]].get_voltage())
+            return voltage
+        else :
             pass
         
     #===========================================================================            #Not working as intended
@@ -126,6 +138,7 @@ class Misc(object):
         for i in range(0, len(device)):
             self.dut[device[i]].off()
             set_mode [i] = str(self.dut[device[i]].get_source_mode())
+            print 'oko %r' % set_mode
             if 'VOLT' in set_mode[i]:
                 self.dut[device[i]].set_current_limit(0.001)
                 self.dut[device[i]].set_voltage(0)  
@@ -159,7 +172,7 @@ class Misc(object):
         self.data = []
         set_mode = [None]*len(device)
         for i in range(0, len(device)):
-            self.dut[device[i]].four_wire_off()
+            #self.dut[device[i]].four_wire_off()
             self.dut[device[i]].set_autorange()
             set_mode[i] = str(self.dut[device[i]].get_source_mode())
             if 'VOLT' in set_mode[i]:
