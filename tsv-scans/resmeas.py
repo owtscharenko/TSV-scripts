@@ -123,11 +123,13 @@ class IV(object):
         time.sleep(self.misc.minimum_delay)
         logging.info("Starting ...")
         
-        self.misc.reset(*device)                                         #resetting the Sourcemeters
+#         self.misc.reset(*device)                                         #resetting the Sourcemeters
         self.misc.set_source_mode('VOLT', current_limit, 1.5, 1.5, *device)          #set voltage source mode for every sourcemeter
         
-        if sense == True:
-            self.dut['Sourcemeter1'].four_wire_on()
+#         if sense == True:
+#             self.dut['Sourcemeter1'].four_wire_on()
+#             print self.dut['Sourcemeter1'].get_remote_sense()
+        self.dut['Sourcemeter1'].on()
 #         elif sense ==  0:
 #             self.dut['Sourcemeter1'].four_wire_off()        
        # self.dut['Sourcemeter2'].four_wire_on()
@@ -151,14 +153,14 @@ class IV(object):
             #print input                                                                                                                                         #Set input current to 0
             #input_current = self.misc.measure_current('Sourcemeter1')                                                                                                #Check input current
             for x in range(0, int(steps)):
-                time.sleep(0.01)                                                                                                                      #loop over steps                                                                
+                #time.sleep(0.05)                                                                                                                      #loop over steps                                                                
                 self.dut['Sourcemeter1'].set_voltage(polarity*input)                                                                                                  #Set input current
-                time.sleep(0.01)
+                #time.sleep(0.05)
                 input_current = self.misc.measure_current('Sourcemeter1')[0]                                                                                          #Value of interest is in the [0] position of the readout list
-                time.sleep(0.01)
+               #time.sleep(0.05)
                 input_voltage = self.misc.measure_voltage('Sourcemeter1')[0]
-                resistance = input_voltage/input_current
-                time.sleep(0.01)
+                resistance = float(input_voltage)/float(input_current)
+                #time.sleep(0.05)
                 #output_voltage_2 = self.misc.measure_voltage('Sourcemeter3')[0]
                 logging.info("Set input voltage to %r" % input)
                 logging.info("Input current is %r A" % input_current)                                                                                           #Logging the readout
@@ -181,7 +183,7 @@ class IV(object):
             
             pbar.finish()
             logging.info('Measurement finished, plotting ...')
-            self.misc.reset(*device)   
+#             self.misc.reset(*device)   
         return file_name#.split('.')[0]
   
 if __name__ == '__main__':
