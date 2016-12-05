@@ -63,16 +63,17 @@ class TSV_res_meas_analysis(object):
         plt.cla()
         plt.ylim(0,ymax)     
         plt.title(self.title)
-        m = np.round(np.mean(z[first:]),4)
+        m = np.round(np.mean(z),4)
+#         m = np.round(np.mean(z[first:]),4)    # use this line instead the upper one, in case of sm 2410 (first 40 values are rubbish)
         if voltage is True:
             plt.xlabel('Voltage [V]')
             xmax = 1.1*np.amax(x)
-            plt.xlim(-0.1*xmax,xmax)
+            plt.xlim(0,xmax)
             plt.plot(x,z, 'b.', markersize = 3,label=' Data \n mean = %.4f' %m)             
         else :
             plt.xlabel('Current [A]')
             xmax = 1.1*np.amax(y)
-            plt.xlim(-0.1*xmax,xmax)
+            plt.xlim(0,xmax)
             plt.plot(y,z,label='Data  mean = %.4f' %m, marker = '.', color='blue')
         plt.ylabel('Resistance [Ohm]')
         if fit:
@@ -83,12 +84,12 @@ class TSV_res_meas_analysis(object):
             #except: 
              #   logging.error('Fit failed!') 
 #         plt.text(0.1,0,'mean = %r' %np.round(np.mean(z[40:]),3))
-        plt.legend(loc='lower right')
+        plt.legend(loc='best', numpoints = 1)
         plt.grid()
 #         box = AnchoredText('mean = %f' %np.round(np.mean(z[first:]),3), loc='right center')
 #         ax = plt.axes()
 #         ax.add_artist(box)        
-#         plt.savefig(self.outfile + '.'+ self.outformat)
+        plt.savefig(self.outfile + '.'+ self.outformat)
         plt.show()
     
     
@@ -161,14 +162,14 @@ class TSV_res_meas_analysis(object):
 #                 files.append(split.file('via','-')[1])
                 files.append(os.path.split(file)[1])#.split('via','-')[1]  
         
-        print '%r vias found, processing ...' %len(files)
+        logging.info('%r vias found, processing ...' %len(files))
         os.chdir(path)
         chip_number = os.path.split(os.path.split(path)[0])[1]
                          
         for i in range(0, len(files)):
-            number.append(re.split('(\d+)',files[i])[1])
-            means.append(np.mean(self.load_file('via' + number[-1] + '-300mamp-4wire.csv')[2][50:]))
-        print number
+            number.append(int(re.split('(\d+)',files[i])[1]))
+            means.append(np.mean(self.load_file('via' + str(number[-1]) + '-300mamp-4wire.csv')[2])) #[50:]
+#         print number
         
         if plotmarker:
             plt.cla()
@@ -200,9 +201,9 @@ class TSV_res_meas_analysis(object):
             plt.savefig(chip_number + '-distribution-map.pdf')
         
         else:
-            print 'creating means only'
+            logging.info('calculating means only')
         
-        return number, means, chip_number   #numbers.append(re.split('(\d+)',files[i])[1])
+        return {'via-numbers' : number, 'via-means' : means, 'chip-number' : chip_number}   #numbers.append(re.split('(\d+)',files[i])[1])
                 
     def plot_3_FE(self, mean1,mean2,mean3):   
     
@@ -235,32 +236,69 @@ class TSV_res_meas_analysis(object):
 #                 via = split.files('via','-')[-1]
 #                    
 #         return means
+     
+     
+    def plot_all_FE (self, mean_array,destination):
+        
+        size = len(mean_array)
+        plt.cla()
+        plt.title('Local distribution of via resistance on %i FE ' % size )
+        plt.xlabel('Number of via')
+        plt.ylabel('Resistance in Ohm')
+        plt.grid()
+        plt.xlim(0,27)
+        plt.gca().set_yscale('log')
+        
+        for i in range(0,len(mean_array)):
+#             print mean_array[i][0]
+            plt.plot(mean_array[i]['via-numbers'], mean_array[i]['via-means'], '.', label = str(mean_array[i]['chip-number']), markersize = 8)
+            logging.info('plotting for FE %r' % mean_array[i]['chip-number'])
+            
+        labels = map(int, sorted(mean_array[i]['via-numbers'],key = int))
+        plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0)) 
+        plt.subplot(111).legend(bbox_to_anchor=(1.1, 1.1), numpoints = 1)
+        #plt.legend(loc = 'best', numpoints=1)
+        os.chdir(destination)
+        plt.savefig('distribution-map-for-' + str(size)+ '-FE.pdf')
+        plt.show()
         
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - [%(levelname)-8s] (%(threadName)-10s) %(message)s")        
     func = TSV_res_meas_analysis()
+#     os.chdir('/media/niko/data/TSV-measurements')
         
     '''
     Plot single via
     '''
-    dirpath = '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D3/resmeas2'
-    dirpath_all = ['/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D3/resmeas2', '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D4/resmeas', '/Users/Niko/Dropbox/Uni/Masterarbeit/TSV-resmeas/TSV-D5/resmeas']
+    dirpath = '/media/niko/data/TSV-measurements/TSV-D3/resmeas3_new_sm'
+    
+    dirpath_all = ['/media/niko/data/TSV-measurements/TSV-D3/resmeas3_new_sm',
+                   '/media/niko/data/TSV-measurements/TSV-D4/resmeas',
+                   '/media/niko/data/TSV-measurements/TSV-D5/resmeas',
+                   '/media/niko/data/TSV-measurements/TSV-S4/resmeas',
+                   '/media/niko/data/TSV-measurements/TSV-S5/resmeas']
     
     f= 'via7-300mamp-4wire.csv'
-    
+   
 #     p = (1, 10, 10,10,10000,1000000)    # polynom
 #     p=(0.05,-2,0.5)  # exp    
     p = (0.1,0.5)
     fit=False
    # x,y,z = func.load_file(os.path.join(dirpath, f))
-    
-    
+ 
 #     func.plot_single_via(x, y, z, p, fit)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
-  #  func.mean_per_FE(dirpath, fit)[1]
-    func.plot_3_FE(func.mean_per_FE(dirpath_all[0],fit), func.mean_per_FE(dirpath_all[1],fit), func.mean_per_FE(dirpath_all[2],fit))
+
+#     func.plot_3_FE(func.mean_per_FE(dirpath_all[0],fit), func.mean_per_FE(dirpath_all[1],fit), func.mean_per_FE(dirpath_all[2],fit))
+#     print dirpath_all
+    mean_array = [func.mean_per_FE(dirpath_all[0],fit),
+                  func.mean_per_FE(dirpath_all[1],fit),
+                  func.mean_per_FE(dirpath_all[2],fit),
+                  func.mean_per_FE(dirpath_all[3],fit),
+                  func.mean_per_FE(dirpath_all[4],fit)]
     
+    func.plot_all_FE(mean_array,'/media/niko/data/TSV-measurements')
     logging.info('finished')
