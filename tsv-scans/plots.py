@@ -57,7 +57,8 @@ class TSV_res_meas_analysis(object):
         return data_corr
 
 
-
+    def fitfunction_line(self, x, m, b):
+        return m*x+b
 
 
     def fitfunction_gauss(self,x,*p):
@@ -123,6 +124,22 @@ class TSV_res_meas_analysis(object):
         a,b,c,d,e,f = p
         return a*x+b*x**2+c*x**3+d*x**4+e*x**5+f*x**5
 
+    def plot_IV_curve(self,x,y):
+
+        p, covariance =  curve_fit(self.fitfunction_line, x, y)
+        plt.cla()
+        plt.xlim(0,0.2)
+        plt.ylabel('Current [A]')
+        plt.xlabel('Voltage [V]')
+#         plt.errorbar(x, y, yerr=e, fmt=None)
+        plt.plot(x,y, label = 'data')
+        plt.plot(x, self.fitfunction_line(x, *p),'r-', label = 'fit')
+        plt.legend(loc = 'best')
+        print 'covariance: %r' % (np.sqrt(np.diag(covariance)))
+        print 'fit: %r' % p
+        
+        plt.savefig('/media/niko/data/TSV-measurements/TSV-S8/resmeas/via6-IV-line-fit.pdf')
+        plt.show()
     
     def mean_res_1_via(self,z):
         b = 0
@@ -158,15 +175,16 @@ if __name__ == "__main__":
     '''
     Plot single via
     '''
-    dirpath = '/media/niko/data/Niko/TSV-D4/resmeas'
-    f= 'via7-300mamp-4wire.csv'
+    dirpath = '/media/niko/data/TSV-measurements/TSV-S8/resmeas'
+    f= 'via6-300mamp-4wire.csv'
     
 #     p = (1, 10, 10,10,10000,1000000)    # polynom
     p=(0.05,-2,0.5)  # exp    
     fit=False
     x,y,z = func.load_file(os.path.join(dirpath, f))
    
-    func.plot_single_via(x, y, z, p, fit)
+#     func.plot_single_via(x, y, z, p, fit)
+    func.plot_IV_curve(x, y)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
