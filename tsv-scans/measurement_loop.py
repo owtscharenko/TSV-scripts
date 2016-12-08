@@ -24,43 +24,51 @@ class IV(object):
     def measure_current(self, device, timeout,minimum_delay):
         
         was_above = False
-        was_below = True
+        was_below = False
         
         current = float(self.dut[device].get_current())
         for i in range(timeout):
             time.sleep(minimum_delay)
             measurement = float(self.dut[device].get_current())
-            if abs(measurement) > abs(current):
-                was_above = True
-            if abs(measurement) < abs(current):
-                was_below = True
-            if was_above and was_below:
+            if measurement < 1e-10 and i > 10:
                 break
-            if measurement == current:
+            if abs(abs(measurement) / abs(current) -1) <= 0.0001:
+#                 print abs(abs(measurement) / abs(current) -1)
                 break
+#             if abs(measurement) > abs(current):
+#                 was_above = True
+#             if abs(measurement) < abs(current):
+#                 was_below = True
+#             if was_above and was_below:
+#                 break
+#             if round(measurement,7) == round(current,7):
+#                 break
             current = measurement
-            
+        print 'current cycles %i' %i     
         return measurement
 
     def measure_voltage(self, device, timeout, minimum_delay):
         
         was_above = False
-        was_below = True
+        was_below = False
         
         voltage = float(self.dut[device].get_voltage())
         for i in range(timeout):
             time.sleep(minimum_delay)
-            measurement = float(self.dut[device].voltage())
-            if abs(measurement) > abs(voltage):
-                was_above = True
-            if abs(measurement) < abs(voltage):
-                was_below = True
-            if was_above and was_below:
+            measurement = float(self.dut[device].get_voltage())
+            if abs(abs(measurement) / abs(voltage) -1) <= 0.0001:
+#                 print abs(abs(measurement) / abs(voltage) -1)
                 break
-            if measurement == voltage:
-                break
+#             if abs(measurement) > abs(voltage):
+#                 was_above = True
+#             if abs(measurement) < abs(voltage):
+#                 was_below = True
+#             if was_above and was_below:
+#                 break
+#             if round(measurement,7) == round(voltage,7):
+#                 break
             voltage = measurement
-            
+        print 'voltage cycles %i' %i    
         return measurement
 
 
@@ -81,32 +89,32 @@ class IV(object):
             with open(file_name, 'wb') as outfile:
                 f = csv.writer(outfile ,quoting=csv.QUOTE_NONNUMERIC)
                     
-                f.writerow(['Input voltage [V]', 'Input current [A]', 'Resistance [ohm] '])                      #What is written in the output file
+                f.writerow(['Input voltage [V]', 'Input current [A]', 'Resistance [ohm] '])           #What is written in the output file
             
-                input = 0
+                input = 0.0005
                 counter = 0                                                                                 
-                for x in range(0, int(steps)):                                                                                                                #loop over steps                                                                
-                    self.dut['Sourcemeter'].set_voltage(input)
-                    self.dut['Sourcemeter'].on()                                                                                                  #Set input current
+                for x in range(0, int(steps)):                          #loop over steps                                                                
+                    self.dut['Sourcemeter'].set_voltage(input)          #Set input current
+                    self.dut['Sourcemeter'].on()                             
                     input_voltage = self.measure_voltage('Sourcemeter', 100, 0.05)
-                    #self.dut['Sourcemeter'].on()                                                                                       #Value of interest is in the [0] position of the readout list
+                    #self.dut['Sourcemeter'].on()
                     input_current = self.measure_current('Sourcemeter', 100 , 0.05)    
                     resistance = input_voltage/input_current
                     logging.info("Set input voltage to %r" % input)
-                    logging.info("Input current is %r A" % input_current)                                                                                           #Logging the readout
+                    logging.info("Input current is %r A" % input_current)                              #Logging the readout
                     logging.info("Input voltage is %r V" % input_voltage)
-#                     print 'resistance %r' % resistance                                                         #Writing readout in output file
-                    if x > 0 and input_current > 0 :
-                        self.data.append([input_voltage, input_current, resistance])                                                          #Writing readout in output file
+#                     print 'resistance %r' % resistance                                               #Writing readout in output file
+                    if input_current > 0 :
+                        self.data.append([input_voltage, input_current, resistance])                   #Writing readout in output file
                         f.writerow(self.data[-1])
                     elif input_current < 0:
                         print'warning: outside range! current = %f' % input_current
-                    elif x == 0 :
-                        print 'discarding first value'
+#                     elif x == 0 :
+#                         print 'discarding first value'
                     if resistance > 1e5 :
                         counter +=1
                     pbar.update(input)
-                    input += stepsize                                                                                                                             #Increase input current for next iteration
+                    input += stepsize                                                    #Increase input current for next iteration
                     if input > max_Vin:
                         break
                     elif counter == 25:
