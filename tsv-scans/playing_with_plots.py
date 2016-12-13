@@ -15,11 +15,12 @@ from numpy.core.defchararray import endswith
 
 
 class TSV_res_meas_analysis(object):
-
+    
+    '''the via map gives the horizontal position of every via wrt the center of the leftmost wirebond pad on the upper side of the FE'''
     
     via_map = {'via1':-169, 'via2':59, 'via3':1090, 'via4':1467, 'via5':1390, 'via6':2067, 'via7':2367, 'via8':3575, 'via9':3725, 'via10':5375,
                'via11':5675, 'via12':8675, 'via13':8825, 'via14':8963, 'via15':11800, 'via16':11950, 'via17':14275, 'via18':16312, 'via19':16550,
-               'via20':16700, 'via21':17750, 'via22':17900, 'via23':18050, 'via24':18200, 'via25':19336, 'via26':19719}
+               'via20':16700, 'via21':17750, 'via22':17900, 'via23':18050, 'via24':18200, 'via25':19336, 'via26':19719} 
     
     def __init__(self, outformat='pdf'):
         
@@ -161,15 +162,29 @@ class TSV_res_meas_analysis(object):
     
     def plot_IV_curve(self,x,y):
 
-        p, covariance =  curve_fit(self.fitfunction_line, x, y)
+        p, covariance =  curve_fit(self.fitfunction_line, x, y, p0=(0,0))
         plt.cla()
         plt.xlim(0,0.2)
+#         plt.ylim(0,0.3)
+        plt.title(self.title + ' IV curve')
         plt.ylabel('Current [A]')
         plt.xlabel('Voltage [V]')
 #         plt.errorbar(x, y, yerr=e, fmt=None)
+#         box = AnchoredText('m = %.3f \n b = %.5f' %(p[0],p[1]), bbox_to_anchor=(1,1),loc=1)
+        textstr=('m = %.3f \n b = %.5f' %(p[0],p[1]))
+        ax = plt.axes()
+#         ax.text(0.1, round(((ax.get_ylim()[1] + ax.get_ylim()[0])/2), 0), textstr, bbox=dict(boxstyle='square', facecolor='white'))
+#         ax.add_artist(box)
         plt.plot(x,y, label = 'data')
-        plt.plot(x, self.fitfunction_line(x, *p),'r-', label = 'fit')
-        plt.legend(loc = 'best')
+        plt.plot(x, self.fitfunction_line(x, *p),'r-', label = 'fit \n'+ textstr)
+        leg = plt.legend(loc = 'best')
+#         plt.draw()
+#         loc = leg.get_window_extent().inverse_transformed(ax.transAxes)
+#         loc = leg.get_frame().get_bbox().bounds
+#         print loc
+#         leg_height = loc.p1[1]-loc.p1[0]
+#         print leg_height
+#         textbox = ax.text(-loc.p0[0]-0.05,-loc.p0[1]-0.05, textstr, bbox=dict(boxstyle='square', facecolor='white'))
         print 'covariance: %r' % (np.sqrt(np.diag(covariance)))
         print 'fit: %r' % p
         
@@ -224,7 +239,7 @@ class TSV_res_meas_analysis(object):
             plt.savefig(chip_number + '-distribution-map-scatter.pdf')
         
         elif plotmarker==2:
-            '''Plotting real map (location of via in mm relative to lower left corner) '''
+            '''Plotting real map (location of via in mm relative to lower left corner/ Pad 1) '''
             
             loc = {}
             x,y = [],[]
@@ -323,7 +338,7 @@ class TSV_res_meas_analysis(object):
                 
         if histo:
             
-            histo_array,histo_data, res_high, res_low = [], [], 0, 0
+            histo_array,histo_data, low_mean,res_high, res_low = [], [], [], 0, 0
             
             with open(file_name, 'wb') as outfile:
                 f = csv.writer(outfile ,quoting=csv.QUOTE_NONNUMERIC)
@@ -335,6 +350,7 @@ class TSV_res_meas_analysis(object):
 #                         print histo_data[-1], type(histo_data[-1])
                         f.writerow([histo_data[-1]])
                         if histo_array[i][b] <= yield_thr :
+                            low_mean.append(histo_array[i][b])
                             res_low += 1
                         elif histo_array[i][b] > yield_thr:
                             res_high +=1
@@ -350,6 +366,7 @@ class TSV_res_meas_analysis(object):
             print 'histogram and data file written to: %r' % file_name
             print 'res_high = %i' % res_high, 'res_low = %i' % res_low
             print 'yield = %.3f' % rel
+            print 'mean resistance of connected vias = %.3f' % np.mean(low_mean)
             
             plt.cla()
             plt.title('Yield of vias on %i FE' % size)
@@ -361,11 +378,11 @@ class TSV_res_meas_analysis(object):
             plt.hist(histo_data, bins = [1e-2, 1e-1,0.2,0.5, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11])#= 10**np.linspace(np.log10(0.1), np.log(1e5),50))
 #             extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 #             plt.legend([extra],('rate of vias < 1 Ohm : \n %.3f' %rel),bbox_to_anchor=(1, 1))
-            box = AnchoredText('vias < 1 Ohm : %.1f %%' %(rel*100), loc=1)
+            box = AnchoredText('vias < 1 Ohm : %.1f %% \n mean res : %.3f Ohm' %(rel*100, np.mean(low_mean)), loc=1)
             ax = plt.axes()
             ax.add_artist(box)
             
-            plt.savefig('histogram-of-' + str(size) + 'FE-without-yield.pdf')
+            plt.savefig('histogram-of-' + str(size) + 'FE-with-mean.pdf')
             plt.show()
             
         
@@ -395,7 +412,7 @@ if __name__ == "__main__":
 
     p = (0.1,0.5)
     fit=2
-    histo = False
+    histo = True
     yield_thr = 1
     mean_array = []
 #     x,y,z = func.load_file(os.path.join(dirpath, f))
