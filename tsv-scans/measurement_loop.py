@@ -44,7 +44,8 @@ class IV(object):
 #             if round(measurement,7) == round(current,7):
 #                 break
             current = measurement
-        print 'current cycles %i' %i     
+        if i > 0 :
+            print 'current cycles %i' %i     
         return measurement
 
     def measure_voltage(self, device, timeout, minimum_delay):
@@ -68,7 +69,8 @@ class IV(object):
 #             if round(measurement,7) == round(voltage,7):
 #                 break
             voltage = measurement
-        print 'voltage cycles %i' %i    
+        if i > 0:
+            print 'voltage cycles %i' %i    
         return measurement
 
 
