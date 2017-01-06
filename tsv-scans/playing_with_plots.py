@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
+import uncertainties as unc
 from decimal import Decimal as dec
+from uncertainties import ufloat, unumpy as unp
 from scipy.optimize import curve_fit
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patches import Rectangle
@@ -11,6 +13,7 @@ import logging
 import path
 import re
 from numpy.core.defchararray import endswith
+from uncertainties.unumpy.core import uarray
 
 
 
@@ -21,6 +24,7 @@ class TSV_res_meas_analysis(object):
     via_map = {'via1':-169, 'via2':59, 'via3':1090, 'via4':1467, 'via5':1390, 'via6':2067, 'via7':2367, 'via8':3575, 'via9':3725, 'via10':5375,
                'via11':5675, 'via12':8675, 'via13':8825, 'via14':8963, 'via15':11800, 'via16':11950, 'via17':14275, 'via18':16312, 'via19':16550,
                'via20':16700, 'via21':17750, 'via22':17900, 'via23':18050, 'via24':18200, 'via25':19336, 'via26':19719} 
+    
     
     def __init__(self, outformat='pdf'):
         
@@ -42,45 +46,63 @@ class TSV_res_meas_analysis(object):
         self.f = os.path.split(path)[1]    
             
         
-        x,y,z = [], [], []
+        x1,x2,y1,y2,z1,z2 =     [], [], [], [], [], []
+
         with open(path, 'rb') as datafile:
             linereader = csv.reader(datafile, delimiter=',', quotechar='"')
             _ = linereader.next()
             frow = linereader.next()
-        
-            x.append(float(frow[0]))
-            y.append(float(frow[1]))
-            z.append(float(frow[2]))    
-            for row in linereader:
-                x.append(float(row[0]))
-                y.append(float(row[1]))
-                z.append(float(row[2]))
-                
-        return np.round(np.array(x),5), np.round(np.array(y),5), np.round(np.array(z),5)
+            
+            ''' introducing uncertainties here: voltage: 0.012 % + 200microV , current: 0.03 % + 500microA '''
 
-    def fitfunction_gauss(self,x,*p):
-        A,mu,sigma = p 
-        return A*np.exp(-(x-mu)**2/(2*sigma**2))
+            x1.append(ufloat(frow[0], float(frow[0])*0.00012 + 0.0002))
+            y1.append(ufloat(frow[1], float(frow[1])*0.0003 + 0.0005))
+            z1.append(x1[-1]/y1[-1])
+            for row in linereader:
+                x1.append(ufloat(row[0], float(row[0])*0.00012 + 0.0002))
+                y1.append(ufloat(row[1], float(row[1])*0.0003 + 0.0005))
+                z1.append(x1[-1]/y1[-1])
+
+        return x1, y1, z1
+
     
     def plot_single_via(self, x, y, z, p0, fit, voltage=True):
+        z1,z2 = [],[]
+        x1,x2 = [],[]
+        y1,y2 = [],[]
+        for i in range(0, len(z)):
+            z1.append(unc.nominal_value(z[i]))
+            z2.append(unc.std_dev(z[i]))
         
-        first = 40
-        ymax = 1.1*np.amax(z)       
+        for i in range(0, len(x)):
+            x1.append(unc.nominal_value(x[i]))
+            x2.append(unc.std_dev(x[i]))
+
+        for i in range(0, len(y)):
+            y1.append(unc.nominal_value(y[i]))
+            y2.append(unc.std_dev(y[i]))
+            
+        first = 0
+        ymax = 1.1*np.amax(z1)
         plt.cla()
         plt.ylim(0,ymax)     
         plt.title(self.title)
-        m = np.round(np.mean(z),4)
+        m = np.mean(z)
+        yerr = z2
 #         m = np.round(np.mean(z[first:]),4)    # use this line instead the upper one, in case of sm 2410 (first 40 values are rubbish)
         if voltage is True:
+
             plt.xlabel('Voltage [V]')
-            xmax = 1.1*np.amax(x)
+            xmax = 1.1*np.amax(x1)
             plt.xlim(0,xmax)
-            plt.plot(x,z, 'b.', markersize = 3,label=' Data \n mean = %.4f' %m)             
+            plt.plot(x1,z1, 'b.', markersize = 3,label=' Data \n mean = %.4s' %m)
+            plt.errorbar(x1, z1, yerr, 0)          
         else :
             plt.xlabel('Current [A]')
-            xmax = 1.1*np.amax(y)
+            xmax = 1.1*np.amax(y1)
             plt.xlim(0,xmax)
-            plt.plot(y,z,label='Data  mean = %.4f' %m, marker = '.', color='blue')
+            plt.plot(y1,z1,label='Data  mean = %.4s' %m, marker = '.', color='blue')
+            plt.errorbar(y1, z1, yerr, 0)
         plt.ylabel('Resistance [Ohm]')
         if fit:
             p, _ =  curve_fit(self.fitfunction_line, x[first:], z[first:], p0) 
@@ -135,6 +157,9 @@ class TSV_res_meas_analysis(object):
         a,b,c,d,e,f = p
         return a*x+b*x**2+c*x**3+d*x**4+e*x**5+f*x**5
 
+    def fitfunction_gauss(self,x,*p):
+        A,mu,sigma = p 
+        return A*np.exp(-(x-mu)**2/(2*sigma**2))
     
     def mean_res_1_via(self,z):
         b = 0
@@ -164,7 +189,7 @@ class TSV_res_meas_analysis(object):
 
         p, covariance =  curve_fit(self.fitfunction_line, x, y, p0=(0,0))
         plt.cla()
-        plt.xlim(0,0.2)
+#         plt.xlim(0,0.2)
 #         plt.ylim(0,0.3)
         plt.title(self.title + ' IV curve')
         plt.ylabel('Current [A]')
@@ -175,9 +200,9 @@ class TSV_res_meas_analysis(object):
         ax = plt.axes()
 #         ax.text(0.1, round(((ax.get_ylim()[1] + ax.get_ylim()[0])/2), 0), textstr, bbox=dict(boxstyle='square', facecolor='white'))
 #         ax.add_artist(box)
-        plt.plot(x,y, label = 'data')
-        plt.plot(x, self.fitfunction_line(x, *p),'r-', label = 'fit \n'+ textstr)
-        leg = plt.legend(loc = 'best')
+        plt.plot(x,y, 'b.', markersize = 3, label = 'data')
+        plt.plot(x, self.fitfunction_line(x, *p),'r-', linewidth = 1.2, label = 'fit \n'+ textstr)
+        leg = plt.legend(loc = 'best', numpoints = 1)
 #         plt.draw()
 #         loc = leg.get_window_extent().inverse_transformed(ax.transAxes)
 #         loc = leg.get_frame().get_bbox().bounds
@@ -188,7 +213,7 @@ class TSV_res_meas_analysis(object):
         print 'covariance: %r' % (np.sqrt(np.diag(covariance)))
         print 'fit: %r' % p
         
-        plt.savefig('/media/niko/data/TSV-measurements/TSV-S8/resmeas/via6-IV-line-fit.pdf')
+        plt.savefig(self.outfile + '-IV-fit.'+ self.outformat)
         plt.show()
     
         
@@ -210,6 +235,10 @@ class TSV_res_meas_analysis(object):
             
         
         if plotmarker==1:
+            '''plotting histo and map'''
+            
+            yerr = ufloat (means, )
+            
             plt.cla()
             plt.title('vias on ' + chip_number)
             plt.grid()
@@ -221,7 +250,7 @@ class TSV_res_meas_analysis(object):
             plt.ylabel('Count')
             plt.savefig(chip_number + '-resistance-histogram.pdf') 
             
-            '''Plotting "map" '''
+            '''Plotting "map" (via index on x-axis) '''
             
             plt.cla()
             plt.title('Local distribution of vias on ' + chip_number)
@@ -239,7 +268,7 @@ class TSV_res_meas_analysis(object):
             plt.savefig(chip_number + '-distribution-map-scatter.pdf')
         
         elif plotmarker==2:
-            '''Plotting real map (location of via in mm relative to lower left corner/ Pad 1) '''
+            '''Plotting only real map (location of via in mm relative to lower left corner/ Pad 1) '''
             
             loc = {}
             x,y = [],[]
@@ -394,7 +423,7 @@ if __name__ == "__main__":
     '''
     Plot single via
     '''
-    dirpath = '/media/niko/data/TSV-measurements/TSV-D3/resmeas3_new_sm'
+    dirpath = '/media/niko/data/TSV-measurements/TSV-D3/resmeas2'
     '''
     Plot all vias
     '''
@@ -415,20 +444,19 @@ if __name__ == "__main__":
     histo = True
     yield_thr = 1
     mean_array = []
-#     x,y,z = func.load_file(os.path.join(dirpath, f))
+    x,y,z = func.load_file(os.path.join(dirpath, f))
  
-#     func.plot_single_via(x, y, z, p, fit)
+    func.plot_single_via(x, y, z, p, fit=False)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
-#     func.plot_3_FE(func.mean_per_FE(dirpath_all[0],fit), func.mean_per_FE(dirpath_all[1],fit), func.mean_per_FE(dirpath_all[2],fit))
     '''
     Array for map/histo of all FE
     ''' 
-    for i in xrange(len(dirpath_all)):
-        mean_array.append(func.mean_per_FE(dirpath_all[i],fit))
+#     for i in xrange(len(dirpath_all)):
+#         mean_array.append(func.mean_per_FE(dirpath_all[i],fit))
                   
     
 #     func.mean_per_FE(dirpath_all[3], fit)
-    func.plot_all_FE(mean_array, histo, 'position', yield_thr, '/media/niko/data/TSV-measurements') # choose either 'numbers' ord 'position'
+#     func.plot_all_FE(mean_array, histo, 'position', yield_thr, '/media/niko/data/TSV-measurements') # choose either 'numbers' ord 'position'
     logging.info('finished')
