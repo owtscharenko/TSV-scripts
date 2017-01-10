@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
+from itertools import izip, izip_longest
+
 import uncertainties as unc
 from decimal import Decimal as dec
 from uncertainties import ufloat, unumpy as unp
@@ -19,7 +21,10 @@ from uncertainties.unumpy.core import uarray
 
 class TSV_res_meas_analysis(object):
     
-    '''the via map gives the horizontal position of every via wrt the center of the leftmost wirebond pad on the upper side of the FE'''
+    '''
+    Via map gives the horizontal position of every via with respect to the center of the leftmost wirebond pad of the lower row 
+    on the upper side of the FE
+    '''
     
     via_map = {'via1':-169, 'via2':59, 'via3':1090, 'via4':1467, 'via5':1390, 'via6':2067, 'via7':2367, 'via8':3575, 'via9':3725, 'via10':5375,
                'via11':5675, 'via12':8675, 'via13':8825, 'via14':8963, 'via15':11800, 'via16':11950, 'via17':14275, 'via18':16312, 'via19':16550,
@@ -46,8 +51,11 @@ class TSV_res_meas_analysis(object):
         self.f = os.path.split(path)[1]    
             
         
-        x1,x2,y1,y2,z1,z2 =     [], [], [], [], [], []
-
+        x1,y1,z1 =     [], [], []
+        xerr = 0.0002
+        yerr = 0.0005
+        xrel = 0.012
+        yrel = 0.03
         with open(path, 'rb') as datafile:
             linereader = csv.reader(datafile, delimiter=',', quotechar='"')
             _ = linereader.next()
@@ -55,38 +63,29 @@ class TSV_res_meas_analysis(object):
             
             ''' introducing uncertainties here: voltage: 0.012 % + 200microV , current: 0.03 % + 500microA '''
 
-            x1.append(ufloat(frow[0], float(frow[0])*0.00012 + 0.0002))
-            y1.append(ufloat(frow[1], float(frow[1])*0.0003 + 0.0005))
+            x1.append(ufloat(frow[0], float(frow[0])*xrel + xerr))
+            y1.append(ufloat(frow[1], float(frow[1])*yrel + yerr))
             z1.append(x1[-1]/y1[-1])
             for row in linereader:
-                x1.append(ufloat(row[0], float(row[0])*0.00012 + 0.0002))
-                y1.append(ufloat(row[1], float(row[1])*0.0003 + 0.0005))
+                x1.append(ufloat(row[0], float(row[0])*xrel + xerr))
+                y1.append(ufloat(row[1], float(row[1])*yrel + yerr))
                 z1.append(x1[-1]/y1[-1])
 
         return x1, y1, z1
 
     
     def plot_single_via(self, x, y, z, p0, fit, voltage=True):
-        z1,z2 = [],[]
-        x1,x2 = [],[]
-        y1,y2 = [],[]
-        for i in range(0, len(z)):
-            z1.append(unc.nominal_value(z[i]))
-            z2.append(unc.std_dev(z[i]))
-        
-        for i in range(0, len(x)):
-            x1.append(unc.nominal_value(x[i]))
-            x2.append(unc.std_dev(x[i]))
 
-        for i in range(0, len(y)):
-            y1.append(unc.nominal_value(y[i]))
-            y2.append(unc.std_dev(y[i]))
+        x1,x2 = self.unpack_uncertainties(x)
+        y1,y2 = self.unpack_uncertainties(y)
+        z1,z2 = self.unpack_uncertainties(z)
             
         first = 0
         ymax = 1.1*np.amax(z1)
         plt.cla()
         plt.ylim(0,ymax)     
         plt.title(self.title)
+
         m = np.mean(z)
         yerr = z2
 #         m = np.round(np.mean(z[first:]),4)    # use this line instead the upper one, in case of sm 2410 (first 40 values are rubbish)
@@ -95,13 +94,13 @@ class TSV_res_meas_analysis(object):
             plt.xlabel('Voltage [V]')
             xmax = 1.1*np.amax(x1)
             plt.xlim(0,xmax)
-            plt.plot(x1,z1, 'b.', markersize = 3,label=' Data \n mean = %.4s' %m)
+            plt.plot(x1,z1, 'b.', markersize = 3,label=' Data \n mean = %s' %m)
             plt.errorbar(x1, z1, yerr, 0)          
         else :
             plt.xlabel('Current [A]')
             xmax = 1.1*np.amax(y1)
             plt.xlim(0,xmax)
-            plt.plot(y1,z1,label='Data  mean = %.4s' %m, marker = '.', color='blue')
+            plt.plot(y1,z1,label='Data  mean = %s' %m, marker = '.', color='blue')
             plt.errorbar(y1, z1, yerr, 0)
         plt.ylabel('Resistance [Ohm]')
         if fit:
@@ -127,7 +126,6 @@ class TSV_res_meas_analysis(object):
         total_r = r_via_bottom + r_via_top
         data_corr = np.subtract(data,total_r)    
         return data_corr, total_r    
-    
     
     def zoom_single_via(self,x,y,z):  
           
@@ -165,12 +163,11 @@ class TSV_res_meas_analysis(object):
         b = 0
         x = 0
         float(x)
-        for i in range(0,len(z)):
+        for i in xrange(len(z)):
             if z[i]>0:
                 x=x+z[i]
                 b += 1
         return np.round(x/b,5)
-    
     
     def histo_1_via(self, data, bins, c):
         
@@ -183,7 +180,6 @@ class TSV_res_meas_analysis(object):
 #         plt.text( 0.4, 25,'color = %r' % c )
         plt.savefig(self.outfile + '_histo' + '.' + self.outformat)
 #         plt.show()
-    
     
     def plot_IV_curve(self,x,y):
 
@@ -215,10 +211,19 @@ class TSV_res_meas_analysis(object):
         
         plt.savefig(self.outfile + '-IV-fit.'+ self.outformat)
         plt.show()
+     
+    def unpack_uncertainties (self, x):
     
+        nominal,std_dev = [],[]
+
+        for i in xrange(len(x)):
+            nominal.append(unc.nominal_value(x[i]))
+            std_dev.append(unc.std_dev(x[i]))
+        
+        return nominal,std_dev
         
     def mean_per_FE(self,path, plotmarker):
-        
+                
         means, files, number = [],[],[]
         via = 1
         for file in os.listdir(path):
@@ -229,21 +234,21 @@ class TSV_res_meas_analysis(object):
         os.chdir(path)
         chip_number = os.path.split(os.path.split(path)[0])[1]
 
-        for i in range(0, len(files)):
+        for i in xrange(len(files)):
             number.append(int(re.split('(\d+)',files[i])[1]))
             means.append(np.mean(self.load_file('via' + str(number[-1]) + '-300mamp-4wire.csv')[2])) #[50:]
             
+        means1,means2 = self.unpack_uncertainties(means)
         
+        yerr = means2
         if plotmarker==1:
-            '''plotting histo and map'''
-            
-            yerr = ufloat (means, )
+            '''plotting histo and map''' 
             
             plt.cla()
             plt.title('vias on ' + chip_number)
             plt.grid()
             #plt.xlim(0,10**np.log(1e3))
-            plt.hist(means, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18)) #logarithmic binning 
+            plt.hist(means1, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18)) #logarithmic binning 
             
             plt.gca().set_xscale('log')
             plt.xlabel('Mean resistance in Ohm')
@@ -262,7 +267,9 @@ class TSV_res_meas_analysis(object):
             labels = map(int, sorted(number,key = int))
             plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
     
-            plt.plot(number, means, ' b.', markersize = 8, label = 'mean per via')
+#             plt.plot(number, means1, ' b.', markersize = 8, label = 'mean per via')
+            plt.errorbar(x, y_nom, yerr=yerr, ls = 'None', marker = 'o', markersize = 3,color = 'blue',label = 'mean per via')  
+            
         
             plt.legend(loc = 'best', numpoints=1)
             plt.savefig(chip_number + '-distribution-map-scatter.pdf')
@@ -278,7 +285,10 @@ class TSV_res_meas_analysis(object):
             for i in xrange (len(loc)):
                 x = loc.keys()
                 y = loc.values()
-            plt.plot(x,y, 'b.', markersize = 7, label = 'mean per via')
+            y_nom, yerr = self.unpack_uncertainties(y)
+            plt.cla()    
+#             plt.plot(x,y_nom, 'b.', markersize = 1, label = 'mean per via')
+            plt.errorbar(x, y_nom, yerr=yerr, ls = 'None',marker = 'o', markersize = 3,color = 'blue',label = 'mean per via')
 
             plt.title('Local distribution of vias on ' + chip_number)
             plt.xlabel('position [mm]')
@@ -291,6 +301,13 @@ class TSV_res_meas_analysis(object):
             plt.savefig(chip_number + '-map-mm.pdf')            
         
         elif plotmarker==3:
+            loc = {}
+            x,y = [],[]
+            for i in xrange (len(number)):
+                loc.update({float(TSV_res_meas_analysis.via_map['via' + str(number[i])])/1000 : means[i]})
+            for i in xrange (len(loc)):
+                x = loc.keys()
+                y = loc.values()
             logging.info('calculating means only')
         
         return {'via-numbers' : number, 'via-means' : means, 'chip-number' : chip_number, 'via-position':loc.keys()}   #numbers.append(re.split('(\d+)',files[i])[1])
@@ -327,12 +344,11 @@ class TSV_res_meas_analysis(object):
 #                    
 #         return means
      
-     
     def plot_all_FE (self, mean_array, histo, x_unit, yield_thr, destination):
         
         size = len(mean_array)
         os.chdir(destination)
-        file_name = destination + '/histogram-data-of-' + str(size) + '-FE.csv'
+        file_name = destination + '/histogram-data-of-' + str(size) + '-FE-testtesttest.csv'
         
         if not histo:    
             plt.cla()
@@ -342,9 +358,12 @@ class TSV_res_meas_analysis(object):
             plt.grid()
             plt.gca().set_yscale('log')
             plt.ylim(1e-2,1e10)
+            means1,means2 = [],[]
                 
             for i in xrange (len(mean_array)):
-                plt.plot(mean_array[i]['via-'+ x_unit], mean_array[i]['via-means'], '.', label = str(mean_array[i]['chip-number']), markersize = 8)
+                means1,means2 = self.unpack_uncertainties(mean_array[i]['via-means'])
+#                 plt.plot(mean_array[i]['via-'+ x_unit], means1, '.', label = str(mean_array[i]['chip-number']), markersize = 8)
+                plt.errorbar(mean_array[i]['via-'+ x_unit], means1, means2, '.', label = str(mean_array[i]['chip-number']), markersize = 4)
                 logging.info('plotting for FE %r' % mean_array[i]['chip-number'])
             
             if x_unit == 'position':
@@ -360,24 +379,25 @@ class TSV_res_meas_analysis(object):
             lgd = plt.subplot(111).legend(loc = 'center right', bbox_to_anchor=(0.98, 0.8,0.23,0.1), numpoints = 1, borderaxespad=0)#, mode = 'expand'
 #             plt.legend(loc = 'best', numpoints=1)
             if x_unit == 'position':
-                plt.savefig('map-for-' + str(size)+ '-FE-mm.pdf', bbox_inches='tight') #bbox_extra_artists=(lgd),
+                plt.savefig('map-for-' + str(size)+ '-FE-mm-test.pdf', bbox_inches='tight') #bbox_extra_artists=(lgd),
             elif x_unit == 'numbers':
-                plt.savefig('map-for-' + str(size)+ '-FE.pdf', bbox_inches='tight')
+                plt.savefig('map-for-' + str(size)+ '-FE-test.pdf', bbox_inches='tight')
             plt.show()
                 
-        if histo:
-            
-            histo_array,histo_data, low_mean,res_high, res_low = [], [], [], 0, 0
-            
+        if histo:        
+            histo_array,histo_data, mean_values,mean_std_devs, low_mean,res_high, res_low = [], [], [],[],[], 0, 0
+                    
             with open(file_name, 'wb') as outfile:
                 f = csv.writer(outfile ,quoting=csv.QUOTE_NONNUMERIC)
-                f.writerow(['Resistance [ohm]'])
+                f.writerow(['Resistance [ohm]']) 
+ 
                 for i in xrange(len(mean_array)):
                     histo_array.append(mean_array[i]['via-means'])
                     for b in xrange(len(histo_array[i])):
+                         
                         histo_data.append(histo_array[i][b])
 #                         print histo_data[-1], type(histo_data[-1])
-                        f.writerow([histo_data[-1]])
+                        f.writerow([unc.nominal_value(histo_data[-1]),unc.std_dev(histo_data[-1])])
                         if histo_array[i][b] <= yield_thr :
                             low_mean.append(histo_array[i][b])
                             res_low += 1
@@ -390,12 +410,12 @@ class TSV_res_meas_analysis(object):
                 f.writerow(['low resistance',res_low])
                 f.writerow(['yield', rel])
 
-            print 'number of FE = %r' % len(histo_array)
-            print 'total number of vias = %r' % len(histo_data)
+            print 'number of FE\'s : %r' % len(mean_array)
+            print 'total number of vias : %i' % (res_low + res_high)
             print 'histogram and data file written to: %r' % file_name
-            print 'res_high = %i' % res_high, 'res_low = %i' % res_low
+            print 'not connected : %i vias' % res_high, '\nconnected : %i vias' % res_low
             print 'yield = %.3f' % rel
-            print 'mean resistance of connected vias = %.3f' % np.mean(low_mean)
+            print 'mean resistance of connected vias = %s' % np.mean(low_mean)
             
             plt.cla()
             plt.title('Yield of vias on %i FE' % size)
@@ -404,14 +424,15 @@ class TSV_res_meas_analysis(object):
             plt.gca().set_xscale('log')
             plt.xlim(1e-2,1e11)
 #             plt.ylim(0,20)
-            plt.hist(histo_data, bins = [1e-2, 1e-1,0.2,0.5, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11])#= 10**np.linspace(np.log10(0.1), np.log(1e5),50))
+            mean_values,mean_std_devs = self.unpack_uncertainties(histo_data)
+            plt.hist(mean_values, bins = [1e-2, 1e-1,0.2,0.5, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11])#= 10**np.linspace(np.log10(0.1), np.log(1e5),50))
 #             extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 #             plt.legend([extra],('rate of vias < 1 Ohm : \n %.3f' %rel),bbox_to_anchor=(1, 1))
-            box = AnchoredText('vias < 1 Ohm : %.1f %% \n mean res : %.3f Ohm' %(rel*100, np.mean(low_mean)), loc=1)
+            box = AnchoredText(' vias < 1 Ohm : %.1f %% \n mean res : %s Ohm' %(rel*100, np.mean(low_mean)), loc=1)
             ax = plt.axes()
             ax.add_artist(box)
             
-            plt.savefig('histogram-of-' + str(size) + 'FE-with-mean.pdf')
+            plt.savefig('histogram-of-' + str(size) + 'FE-with-mean-and-uncertainties.pdf')
             plt.show()
             
         
@@ -440,23 +461,23 @@ if __name__ == "__main__":
     f= 'via7-300mamp-4wire.csv'
 
     p = (0.1,0.5)
-    fit=2
+    fit=3
     histo = True
     yield_thr = 1
     mean_array = []
     x,y,z = func.load_file(os.path.join(dirpath, f))
  
-    func.plot_single_via(x, y, z, p, fit=False)
+#     func.plot_single_via(x, y, z, p, fit=False)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
     '''
     Array for map/histo of all FE
     ''' 
-#     for i in xrange(len(dirpath_all)):
-#         mean_array.append(func.mean_per_FE(dirpath_all[i],fit))
+    for i in xrange(len(dirpath_all)):
+        mean_array.append(func.mean_per_FE(dirpath_all[i],fit))
                   
     
 #     func.mean_per_FE(dirpath_all[3], fit)
-#     func.plot_all_FE(mean_array, histo, 'position', yield_thr, '/media/niko/data/TSV-measurements') # choose either 'numbers' ord 'position'
+    func.plot_all_FE(mean_array, histo, 'position', yield_thr, '/media/niko/data/TSV-measurements') # choose either 'numbers' ord 'position'
     logging.info('finished')
