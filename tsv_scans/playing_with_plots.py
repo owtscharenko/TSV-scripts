@@ -276,7 +276,7 @@ class TSV_res_meas_analysis(object):
             labels = map(int, sorted(number,key = int))
             plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
 #             plt.plot(number, means1, ' b.', markersize = 8, label = 'mean per via')
-            plt.errorbar(x, y_nom, yerr=yerr, ls = 'None', marker = 'o', markersize = 3,color = 'blue',label = 'mean per via')  
+            plt.errorbar(x, means1, yerr=yerr, ls = 'None', marker = 'o', markersize = 3,color = 'blue',label = 'mean per via')  
             plt.legend(loc = 'best', numpoints=1)
             plt.savefig(chip_number + '-distribution-map-scatter.pdf')
         
