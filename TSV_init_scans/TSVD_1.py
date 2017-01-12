@@ -4,7 +4,7 @@ import os
 from pybar.run_manager import RunManager  # importing run manager
 from pybar.scans.scan_init import InitScan
 from pybar.scans.test_register import RegisterTest
-from pybar.scans.scan_digital_with_analog import DigitalScan
+from pybar.scans.scan_digital import DigitalScan
 from pybar.scans.scan_analog import AnalogScan
 from pybar.scans.tune_fei4 import Fei4Tuning
 from pybar.scans.tune_stuck_pixel import StuckPixelScan
@@ -14,11 +14,11 @@ from pybar.scans.tune_noise_occupancy import NoiseOccupancyScan
 
 if __name__ == "__main__":   
     
-    os.chdir('/media/niko/data/Niko/TSV-D1')
+    os.chdir('/media/niko/data/IBL_irrad_samples/pcb-test')
     target_threshold = 55  # in PlsrDAC (assuming 1 PlsrDAC = 55 electrons)
-    target_charge = 1020  # in PlsrDAC (assuming 1 PlsrDAC = 55 electrons)
+    target_charge = 55  # in PlsrDAC (assuming 1 PlsrDAC = 55 electrons)
     target_tot = 3
-    mask = 8
+    mask = 3
     gdac_mask = [3]
   
     runmngr = RunManager('configuration.yaml')

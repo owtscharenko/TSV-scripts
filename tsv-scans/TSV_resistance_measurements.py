@@ -10,7 +10,7 @@ import numpy as np
 
 if __name__ == '__main__':
                                
-    via = 4
+    via = 26
 #     current = -0.02 # In Ampere
     voltage = 0.19  # In VOLT
     climit = 0.3 # In Ampere
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 #         marker = True
     
     f = 'via' + str(via) + '-' + str(int(climit*1000)) + 'mamp-4wire.csv'
-    workdir = '/media/niko/data/TSV-measurements/TSV-S6/resmeas'
+    workdir = '/media/niko/data/TSV-measurements/TSV-S6/resmeas2'
     os.chdir(workdir)
     '''
     Scanning
@@ -46,10 +46,11 @@ if __name__ == '__main__':
     p = (1,5,7);
     func = TSV_res_meas_analysis()
 #     print workdir, f
-    x,y,z = func.load_file(os.path.join(workdir, file))     
+    x,y,z = func.load_file(os.path.join(workdir, file))
+    print ('mean resistance: %r ' % np.mean(z))     
     func.plot_single_via(x, y, z, p, marker)     
 #     print func.mean_res_1_via(z)
-    func.histo_1_via(z,60,'b')
-    print ('mean resistance: %r ' % np.mean(z))
+#     func.histo_1_via(z,60,'b')
+    func.plot_IV_curve(x,y)
     logging.info('plotting finished')
           

@@ -31,11 +31,15 @@ transfer_layer:
     - name : Visa
       type : Visa
       init :
-          resource_name : TCPIP::131.220.165.164
+          resource_name : TCPIP::131.220.165.166
           backend : "@py"
           #read_termination : "\n"
 
-
+#    - name : USB
+#      type : Visa
+#      init :
+#          resource_name : /dev/usbtmc0
+#          backend : "@py"
 
 hw_drivers:
 #  - name      : Sourcemeter
