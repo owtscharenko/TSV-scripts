@@ -83,7 +83,7 @@ class TSV_res_meas_analysis(object):
         z1,z2 = self.unpack_uncertainties(z)
         first = 0
         ymax = 1.1*np.amax(z1)
-        plt.cla()
+        plt.clf()
         plt.ylim(0,ymax)     
         plt.title(self.title)
 
@@ -108,8 +108,8 @@ class TSV_res_meas_analysis(object):
             plt.plot(self.fitfunction_line(x[first:],*p), 'r',label='Fit')
 #             print curve_fit(self.fitfunction_single_via, x, z, p0=(1,-1,10))
             print 'fit succesful: b = %r' % p[1]
-            #except: 
-             #   logging.error('Fit failed!') 
+#             except: 
+#                 logging.error('Fit failed!') 
 #         plt.text(0.1,0,'mean = %r' %np.round(np.mean(z[40:]),3))
         plt.legend(loc='best', numpoints = 1)
         plt.grid()
@@ -187,13 +187,13 @@ class TSV_res_meas_analysis(object):
         plt.savefig('histogram-of-mean-R-of' + str(len(x)) + '-FE.pdf')
         plt.show()
     
-    def plot_IV_curve(self,x,y):
+    def plot_IV_curve(self, x, y, logy):
 
         voltage, voltage_std_dev = self.unpack_uncertainties(x)
         current, current_std_dev = self.unpack_uncertainties(y)
         
-        p, covariance =  curve_fit(self.fitfunction_line, x, y, p0=(0,0))
-        plt.cla()
+        p, covariance =  curve_fit(self.fitfunction_line, voltage, current, p0=(0,0))
+        plt.clf()
 #         plt.xlim(0,0.2)
 #         plt.ylim(0,0.3)
         plt.title(self.title + ' IV curve')
@@ -205,20 +205,25 @@ class TSV_res_meas_analysis(object):
         ax = plt.axes()
 #         ax.text(0.1, round(((ax.get_ylim()[1] + ax.get_ylim()[0])/2), 0), textstr, bbox=dict(boxstyle='square', facecolor='white'))
 #         ax.add_artist(box)
-        plt.errorbar(voltage,current, voltage_std_dev, current_std_dev, 'b.', markersize = 3, label = 'data')
-        plt.plot(voltage, self.fitfunction_line(x, *p),'r-', linewidth = 1.2, label = 'fit \n'+ textstr)
-        leg = plt.legend(loc = 'best', numpoints = 1)
-#         plt.draw()
-#         loc = leg.get_window_extent().inverse_transformed(ax.transAxes)
-#         loc = leg.get_frame().get_bbox().bounds
-#         print loc
-#         leg_height = loc.p1[1]-loc.p1[0]
-#         print leg_height
-#         textbox = ax.text(-loc.p0[0]-0.05,-loc.p0[1]-0.05, textstr, bbox=dict(boxstyle='square', facecolor='white'))
-        print 'covariance: %r' % (np.sqrt(np.diag(covariance)))
-        print 'fit: %r' % p
-        
-        plt.savefig(self.outfile + '-IV-fit.'+ self.outformat)
+        if not logy:
+            title = 'fit'
+            plt.errorbar(voltage,current, voltage_std_dev, current_std_dev, 'b.', markersize = 3, label = 'data')
+            plt.plot(voltage, self.fitfunction_line(x, *p),'r-', linewidth = 1.2, label = 'fit \n'+ textstr)
+            leg = plt.legend(loc = 'best', numpoints = 1)
+    #         plt.draw()
+    #         loc = leg.get_window_extent().inverse_transformed(ax.transAxes)
+    #         loc = leg.get_frame().get_bbox().bounds
+    #         print loc
+    #         leg_height = loc.p1[1]-loc.p1[0]
+    #         print leg_height
+    #         textbox = ax.text(-loc.p0[0]-0.05,-loc.p0[1]-0.05, textstr, bbox=dict(boxstyle='square', facecolor='white'))
+            print 'covariance: %r' % (np.sqrt(np.diag(covariance)))
+            print 'fit: %r' % p
+        if logy:
+            title = 'plot-log'
+            plt.grid()
+            plt.semilogy(voltage,current, label = 'data')
+        plt.savefig(self.outfile + '-IV-' + title + '.'+ self.outformat)
         plt.show()
      
     def unpack_uncertainties (self, x):
@@ -467,7 +472,7 @@ if __name__ == "__main__":
     '''
     Plot single via
     '''
-    dirpath = '/media/niko/data/TSV-measurements/TSV-D3/resmeas3_new_sm'
+    dirpath = '/media/niko/data/TSV-measurements/TSV-D7/resmeas'
     '''
     Plot all vias
     '''
@@ -481,7 +486,7 @@ if __name__ == "__main__":
                    '/media/niko/data/TSV-measurements/TSV-S7/resmeas',
                    '/media/niko/data/TSV-measurements/TSV-S8/resmeas']
     
-    f= 'via8-300mamp-4wire.csv'
+    f= 'via1-300mamp-4wire.csv'
 
     p = (0.1,0.5)
     fit=3
@@ -492,18 +497,20 @@ if __name__ == "__main__":
     x,y,z = func.load_file(os.path.join(dirpath, f))
  
 #     func.plot_single_via(x, y, z, p, fit=False)
+    func.mean_per_FE(dirpath,plotmarker = 2)
+#     func.plot_IV_curve(x, y, logy=True)
 #     func.fitfunction_single_via(x, z, p0)   
 #     print func.mean_res_1_via(z)
 #     func.histo_1_via(z,50,'blue')
     '''
     Array for map/histo of all FE
     ''' 
-    for i in xrange(len(dirpath_all)):
-        mean_array.append(func.mean_per_FE(dirpath_all[i],fit))
+#     for i in xrange(len(dirpath_all)):
+#         mean_array.append(func.mean_per_FE(dirpath_all[i],fit))
 #         mean_per_fe.append(np.mean(func.mean_per_FE(dirpath_all[i],fit)['via-means']))
     
                   
 #     func.histo_FEs(mean_per_fe)
 #     func.mean_per_FE(dirpath_all[3], fit)
-    func.plot_all_FE(mean_array, histo, 'position', yield_thr, '/media/niko/data/TSV-measurements') # choose either 'numbers' or 'position'
+#     func.plot_all_FE(mean_array, histo, 'position', yield_thr, '/media/niko/data/TSV-measurements') # choose either 'numbers' or 'position'
     logging.info('finished')
