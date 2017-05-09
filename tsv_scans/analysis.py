@@ -7,6 +7,11 @@ from decimal import Decimal as dec
 from scipy.optimize import curve_fit
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patches import Rectangle
+import matplotlib.ticker as mtick
+from matplotlib.colors import LogNorm
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.backends.backend_agg import FigureCanvas
+from matplotlib.figure import Figure
 
 import os
 import logging
@@ -96,7 +101,7 @@ class TSV_analysis(object):
         
     
     
-    def plot_FE(self, folder, resistance_array, plotmarker=2):
+    def plot_FE(self, folder, resistance_array,plot = True):
         
         '''create folder and plot title'''
         if not os.path.exists(folder + '/new-plots'):
@@ -111,79 +116,116 @@ class TSV_analysis(object):
 
         chip = path_list[5]
 
-        if plotmarker==1:
-            '''plotting histo and map''' 
-            
-            plt.cla()
-            plt.title('vias on ' + chip)
-            plt.grid()
-#             histo, bins = np.histogram(res,bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18))
-#             center = (bins[:-1] + bins[1:]) / 2
-#             plt.bar(center, histo) #logarithmic binning 
-            plt.hist(res, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18))
-            plt.gca().set_xscale('log')
-            plt.xlabel('Mean resistance in Ohm')
-            plt.ylabel('Count')
-            plt.savefig(savedir + chip + '-resistance-histogram.pdf') 
-
-            '''Plotting "map" (via index on x-axis) '''
-            
-            plt.cla()
-            plt.title('Local distribution of vias on ' + chip)
-            plt.xlabel('Via index')
-            plt.ylabel('Resistance in Ohm')
-            plt.grid()
-            plt.xlim(0,27)
-            plt.gca().set_yscale('log')
-            labels = map(int, sorted(via_number,key = int))
-            plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
-#             plt.plot(number, means1, ' b.', markersize = 8, label = 'mean per via')
-            plt.errorbar(via_number, res, yerr=err, ls = 'None', marker = 'o', markersize = 3,label = 'mean per via')  
-            plt.legend(loc = 'best', numpoints=1)
-            plt.savefig(savedir + chip + '-distribution-map-scatter.pdf')
-
-        
-        elif plotmarker==2:
-            '''Plotting only real map (location of via in mm relative to lower left corner/ Pad 1) '''
-            
+        ''' 
+        gives histogram and map based on position in mm on FE, relative to first bondpad
+        as well as map based on via number
+        '''
+        if plot == True:
+            with PdfPages(savedir + chip + '-resistances.pdf') as output_pdf:    
+                
+                #---------------------- plotting histogram
+    
+                fig = Figure()
+                _ = FigureCanvas(fig)
+                ax = fig.add_subplot(111)
+                ax.set_title('vias on ' + chip)
+                ax.grid()
+    #             histo, bins = np.histogram(res,bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18))
+    #             center = (bins[:-1] + bins[1:]) / 2
+    #             plt.bar(center, histo) #logarithmic binning 
+                ax.hist(res, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),18))
+                ax.set_xscale('log')
+                ax.set_xlabel('Mean resistance in Ohm')
+                ax.set_ylabel('Count')
+                fig.tight_layout()
+                output_pdf.savefig(fig) 
+    
+                '''Plotting "map" (via index on x-axis) '''
+                
+                plt.cla()
+                fig = Figure()
+                _ = FigureCanvas(fig)
+                ax = fig.add_subplot(111)
+                ax.set_title('Local distribution of vias on ' + chip)
+                ax.set_xlabel('Via index')
+                ax.set_ylabel('Resistance in Ohm')
+                ax.grid()
+                ax.set_xlim(0,27)
+                ax.set_yscale('log')
+                labels = map(int, sorted(via_number,key = int))
+                ax.set_xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
+    #             plt.plot(number, means1, ' b.', markersize = 8, label = 'mean per via')
+                ax.errorbar(via_number, res, yerr=err, ls = 'None', marker = 'o', markersize = 3,label = 'mean per via')  
+                ax.legend(loc = 'best', numpoints=1)
+                fig.tight_layout()
+                output_pdf.savefig(fig)
+                
+                '''Plotting only real map (location of via in mm relative to lower left corner/ Pad 1) '''
+                
+                loc = {}
+                x,y = [],[]
+                for i in xrange (len(via_number)):
+                    loc.update({float(TSV_analysis.via_map['via' + str(int(via_number[i]))])/1000 : res[i]})
+                for i in xrange (len(loc)):
+                    x = loc.keys()
+                    y = loc.values()
+    
+    
+                fig = Figure()
+                _ = FigureCanvas(fig)
+                ax = fig.add_subplot(111)    
+                ax.plot(x,y, 'o', markersize = 3, label = 'mean resistance per via')
+    #             plt.errorbar(x, y_nom, yerr=yerr, ls = 'None',marker = 'o', markersize = 3,label = 'mean resistance per via')
+    
+                ax.set_title('Local distribution of vias on ' + chip)
+                ax.set_xlabel('Position on chip [mm]')
+                ax.set_ylabel('Resistance [Ohm]')
+                ax.grid()
+                ax.set_xlim(-0.5,20.1)
+                ax.set_yscale('log')
+                ax.legend(loc = 'best', numpoints=1)
+                fig.tight_layout()
+                output_pdf.savefig(fig)     
+            logging.info('plotting of %r finished' % chip) 
+        else:
             loc = {}
-            x,y = [],[]
+            
             for i in xrange (len(via_number)):
                 loc.update({float(TSV_analysis.via_map['via' + str(int(via_number[i]))])/1000 : res[i]})
-            for i in xrange (len(loc)):
-                x = loc.keys()
-                y = loc.values()
-#             y_nom, yerr = self.unpack_uncertainties(y)
-
-            plt.cla()    
-            plt.plot(x,y, 'o', markersize = 3, label = 'mean resistance per via')
-#             plt.errorbar(x, y_nom, yerr=yerr, ls = 'None',marker = 'o', markersize = 3,label = 'mean resistance per via')
-
-            plt.title('Local distribution of vias on ' + chip)
-            plt.xlabel('Position on chip [mm]')
-            plt.ylabel('Resistance [Ohm]')
-            plt.grid()
-            plt.xlim(-0.5,20.1)
-            plt.gca().set_yscale('log')
-            plt.legend(loc = 'best', numpoints=1)
-
-            plt.savefig(savedir + chip + '-map-mm.pdf')     
-                   
-        logging.info('plotting of %r finished' % chip)    
-                
-    
-    
-    def plot_all_FE (self, mean_array, x_unit, yield_thr, destination,histo):
+           
+                  
+            logging.info('calculated means of %r' % chip)
         
-        size = len(mean_array)
-        os.chdir(destination)
-        file_name = destination + '/histogram-data-of-' + str(size) + '-FE-unc.csv'
+        return loc, chip   
+    
+    
+    def plot_all_FE (self, devices, yield_thr, workdir):
+        
+        ''' calculates yield of vias below yield_thr, makes scatter plot of all FE
+            makes histogram of all vias
+        '''
+        
+        size = len(devices)
+#         os.chdir(workdir)
+        file_name = os.path.join(workdir, 'resistance-plots-of-' + str(size) + '-FE.csv')
         count = 0
         meancalc = []
         
-        plt.clf()
+        for i in devices:
+            vias_on_FE = 0
+            files = os.listdir(i)
+            resistances = []
+            for x in files:
+                if x.endswith('.csv'):
+                    res, unc, datafile = TSV_analysis().get_resistance_from_fit(os.path.join(i,x))
+                    resistances.append((res,unc,float(datafile.split(os.sep)[-1].split('-')[0][3:]))) # last entry gives via number from datafile, needed for map
+                    vias_on_FE +=1
+            logging.info('processed %r vias in %s' % (vias_on_FE,i))
         
-        if not histo:    
+        with PdfPages(file_name[:-3] + 'pdf') as output_pdf:  
+        
+            ''' calculating yield and plotting scatter plot (map) '''
+            
             plt.title('Local distribution of via resistance on %i FE' % size )
             plt.ylabel('Resistance [Ohm]')
             plt.grid()
@@ -191,7 +233,7 @@ class TSV_analysis(object):
             plt.ylim(1e-2,1e10)
             means1,means2 = [],[]
             high = 0
-            rel = 0
+            via_yield = 0
             total_count= 0
                             
             for i in xrange (len(mean_array)):
@@ -211,33 +253,33 @@ class TSV_analysis(object):
                 print 'mean of FE %s is: %s with %i vias connected' %(mean_array[i]['chip-number'],np.mean(meancalc),count)
                 total_count += count
                   
-            if x_unit == 'position':
-                plt.xlim(-0.5,20.5)
-                plt.xlabel('Postion on chip [mm]')
-            elif x_unit =='numbers':
-                plt.xlim(0,27)  
-                plt.xlabel('via index') 
-                labels = map(int, sorted(mean_array[i]['via-numbers'],key = int))
-                plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
+    
+            plt.xlim(-0.5,20.5)
+            plt.xlabel('Postion on chip [mm]')
+    #         elif x_unit =='numbers':
+    #             plt.xlim(0,27)  
+    #             plt.xlabel('via index') 
+    #             labels = map(int, sorted(mean_array[i]['via-numbers'],key = int))
+    #             plt.xticks( np.arange(min(labels)-1, max(labels)+2, 2.0))
                 
-            rel = float(total_count)/float(total_count + high)# computing yield
+            via_yield = float(total_count)/float(total_count + high)# computing via_yield
             
-#             plt.subplot(111).legend(loc = 'upper right', bbox_to_anchor=(0.98, 0.8,0.19,0.19), numpoints = 1, borderaxespad=0)#, mode = 'expand'
+    #             plt.subplot(111).legend(loc = 'upper right', bbox_to_anchor=(0.98, 0.8,0.19,0.19), numpoints = 1, borderaxespad=0)#, mode = 'expand'
             props = dict(boxstyle='square', facecolor='wheat', alpha=0.5)
-            plt.subplot(111).text(0.98, 0.77, 'connected: %i \nyield: %2.0f %%' % (total_count,rel*100),verticalalignment='top',transform=plt.subplot(111).transAxes,bbox=props)
-            if x_unit == 'position':
-                plt.savefig('map-for-' + str(size)+ '-FE-mm-new-stash2.pdf', bbox_inches='tight') #bbox_extra_artists=(lgd),
-            elif x_unit == 'numbers':
-                plt.savefig('map-for-' + str(size)+ '-FE-new-stash.pdf', bbox_inches='tight')
+            plt.subplot(111).text(0.98, 0.77, 'connected: %i \nyield: %2.0f %%' % (total_count,via_yield*100),verticalalignment='top',transform=plt.subplot(111).transAxes,bbox=props)
+    
+            plt.savefig('map-for-' + str(size)+ '-FE-mm-new-stash2.pdf', bbox_inches='tight') #bbox_extra_artists=(lgd),
+    
             plt.show()
-                
-        if histo:        
+                    
+            ''' plotting histogram'''
+            
             histo_array,histo_data, mean_values,mean_std_devs, low_mean,res_high, res_low = [], [], [],[],[], 0, 0
                     
             with open(file_name, 'wb') as outfile:
                 f = csv.writer(outfile ,quoting=csv.QUOTE_NONNUMERIC)
                 f.writerow(['Resistance [ohm]']) 
- 
+            
                 for i in xrange(len(mean_array)):
                     histo_array.append(mean_array[i]['via-means'])
                     count = 0
@@ -254,17 +296,17 @@ class TSV_analysis(object):
                             res_high +=1
                     logging.info('histogramming %r' % mean_array[i]['chip-number'])
                     print 'mean of FE %s is : %s with %i vias connected' %(mean_array[i]['chip-number'],np.mean(meancalc),count)
-                rel = float(res_low)/float(res_high + res_low)
+                via_yield = float(res_low)/float(res_high + res_low)
                 
                 f.writerow(['high resistance',res_high])
                 f.writerow(['low resistance',res_low])
-                f.writerow(['yield', rel])
-
+                f.writerow(['yield', via_yield])
+            
             print 'number of FE\'s : %r' % len(mean_array)
             print 'total number of vias : %i' % (res_low + res_high)
             print 'histogram and data file written to: %r' % file_name
             print 'not connected : %i vias' % res_high, '\nconnected : %i vias' % res_low
-            print 'yield = %.3f' % rel
+            print 'yield = %.3f' % via_yield
             print 'mean resistance of connected vias = %s' % np.mean(low_mean)
             
             plt.clf()
@@ -276,19 +318,19 @@ class TSV_analysis(object):
             spacing = [0.01, 0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e9] #np.logspace(np.log10(0.01),np.log10(10.0), 10)
             print spacing
             plt.xticks(spacing)
-#             plt.ylim(0,20)
+            #             plt.ylim(0,20)
             mean_values,mean_std_devs = self.unpack_uncertainties(histo_data)
             
             plt.hist(mean_values, bins = spacing)
-#             plt.hist(mean_values, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),15),align='mid')
-#             plt.hist(mean_values, bins = [1e-1,1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11],align='right')#= 10**np.linspace(np.log10(0.1), np.log(1e5),50))
+            #             plt.hist(mean_values, bins = 10**np.linspace(np.log10(0.1), np.log(1e5),15),align='mid')
+            #             plt.hist(mean_values, bins = [1e-1,1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11],align='right')#= 10**np.linspace(np.log10(0.1), np.log(1e5),50))
             plt.axvline(x=yield_thr, ymin=0, ymax = 200, linewidth=2, color = 'r', linestyle = '--')
-#             plt.hist(mean_values, bins = [0, 0.5, 1,2, 3, 4, 5,6,7,8,9,10])
-#             extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
-#             plt.legend([extra],('rate of vias < 1 Ohm : \n %.3f' %rel),bbox_to_anchor=(1, 1))
+            #             plt.hist(mean_values, bins = [0, 0.5, 1,2, 3, 4, 5,6,7,8,9,10])
+            #             extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
+            #             plt.legend([extra],('rate of vias < 1 Ohm : \n %.3f' %via_yield),bbox_to_anchor=(1, 1))
             r = unc.nominal_value(np.mean(low_mean))
             r2 = ufloat(r, 0.013)            
-            box = AnchoredText(' vias $\leq$ 1 $\Omega$: %2.f %% \n mean R : %.2f $\pm 0.01$ $\Omega$' %(rel*100, r), loc=1)
+            box = AnchoredText(' vias $\leq$ 1 $\Omega$: %2.f %%\n mean R : %.2f $\pm 0.01$ $\Omega$' %(via_yield*100, r), loc=1)
             ax = plt.axes()
             ax.add_artist(box)
             
@@ -364,7 +406,7 @@ if __name__ == "__main__":
                 all_res.append(resistances[-1])
         logging.info('processed %r vias in %s' % (count,i))
         resistances = np.array(resistances)
-        TSV_analysis().plot_FE(i,resistances, plotmarker=2)
+        TSV_analysis().plot_FE(i,resistances)
     all_res = np.array(all_res)
     print all_res.shape
     print 'Processed %r devices' % len(devices)
